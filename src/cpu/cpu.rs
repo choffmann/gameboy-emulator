@@ -11,7 +11,7 @@ pub struct CPU {
 }
 
 impl CPU {
-    pub fn execute(&mut self, instructions: Instruction) {
+    pub fn execute(&mut self, instructions: Instruction) -> u16 {
         match instructions {
             Instruction::ADD(target) => self.match_add(target, false),
             Instruction::ADC(target) => self.match_add(target, true),
@@ -26,7 +26,7 @@ impl CPU {
         }
     }
 
-    fn match_add(&mut self, target: Logic8BitRegister, with_carry: bool) {
+    fn match_add(&mut self, target: Logic8BitRegister, with_carry: bool) -> u16 {
         match target {
             Logic8BitRegister::A => self.exec_add(self.register.a, with_carry),
             Logic8BitRegister::B => self.exec_add(self.register.b, with_carry),
@@ -40,35 +40,35 @@ impl CPU {
         }
     }
 
-    fn match_inc(&mut self, target: Logic8BitRegister) {
+    fn match_inc(&mut self, target: Logic8BitRegister) -> u16 {
         match target {
-            Logic8BitRegister::A => self.register.a = self.inc(self.register.a),
-            Logic8BitRegister::B => self.register.b = self.inc(self.register.b),
-            Logic8BitRegister::C => self.register.c = self.inc(self.register.c),
-            Logic8BitRegister::D => self.register.d = self.inc(self.register.d),
-            Logic8BitRegister::E => self.register.e = self.inc(self.register.e),
-            Logic8BitRegister::H => self.register.h = self.inc(self.register.h),
-            Logic8BitRegister::L => self.register.l = self.inc(self.register.l),
+            Logic8BitRegister::A => self.exec_inc(self.register.a),
+            Logic8BitRegister::B => self.exec_inc(self.register.b),
+            Logic8BitRegister::C => self.exec_inc(self.register.c),
+            Logic8BitRegister::D => self.exec_inc(self.register.d),
+            Logic8BitRegister::E => self.exec_inc(self.register.e),
+            Logic8BitRegister::H => self.exec_inc(self.register.h),
+            Logic8BitRegister::L => self.exec_inc(self.register.l),
             Logic8BitRegister::D8 => todo!("Not implemented"),
             Logic8BitRegister::HLI => todo!("Not implemented")
         }
     }
 
-    fn match_dec(&mut self, target: Logic8BitRegister) {
+    fn match_dec(&mut self, target: Logic8BitRegister) -> u16 {
         match target {
-            Logic8BitRegister::A => self.register.a = self.dec(self.register.a),
-            Logic8BitRegister::B => self.register.b = self.dec(self.register.b),
-            Logic8BitRegister::C => self.register.c = self.dec(self.register.c),
-            Logic8BitRegister::D => self.register.d = self.dec(self.register.d),
-            Logic8BitRegister::E => self.register.e = self.dec(self.register.e),
-            Logic8BitRegister::H => self.register.h = self.dec(self.register.h),
-            Logic8BitRegister::L => self.register.l = self.dec(self.register.l),
+            Logic8BitRegister::A => self.exec_dec(self.register.a),
+            Logic8BitRegister::B => self.exec_dec(self.register.b),
+            Logic8BitRegister::C => self.exec_dec(self.register.c),
+            Logic8BitRegister::D => self.exec_dec(self.register.d),
+            Logic8BitRegister::E => self.exec_dec(self.register.e),
+            Logic8BitRegister::H => self.exec_dec(self.register.h),
+            Logic8BitRegister::L => self.exec_dec(self.register.l),
             Logic8BitRegister::D8 => todo!("Not implemented"),
             Logic8BitRegister::HLI => todo!("Not implemented")
         }
     }
 
-    fn match_sub(&mut self, target: Logic8BitRegister, with_carry: bool) {
+    fn match_sub(&mut self, target: Logic8BitRegister, with_carry: bool) -> u16 {
         match target {
             Logic8BitRegister::A => self.exec_sub(self.register.a, with_carry),
             Logic8BitRegister::B => self.exec_sub(self.register.b, with_carry),
@@ -82,49 +82,49 @@ impl CPU {
         }
     }
 
-    fn match_and(&mut self, target: Logic8BitRegister) {
+    fn match_and(&mut self, target: Logic8BitRegister) -> u16 {
         match target {
-            Logic8BitRegister::A => self.register.a = self.and(self.register.a),
-            Logic8BitRegister::B => self.register.b = self.and(self.register.b),
-            Logic8BitRegister::C => self.register.c = self.and(self.register.c),
-            Logic8BitRegister::D => self.register.d = self.and(self.register.d),
-            Logic8BitRegister::E => self.register.e = self.and(self.register.e),
-            Logic8BitRegister::H => self.register.h = self.and(self.register.h),
-            Logic8BitRegister::L => self.register.l = self.and(self.register.l),
-            Logic8BitRegister::D8 => todo!("Not implemented"),
-            Logic8BitRegister::HLI => todo!("Not implemented")
+            Logic8BitRegister::A => self.exec_and(self.register.a),
+            Logic8BitRegister::B => self.exec_and(self.register.b),
+            Logic8BitRegister::C => self.exec_and(self.register.c),
+            Logic8BitRegister::D => self.exec_and(self.register.d),
+            Logic8BitRegister::E => self.exec_and(self.register.e),
+            Logic8BitRegister::H => self.exec_and(self.register.h),
+            Logic8BitRegister::L => self.exec_and(self.register.l),
+            Logic8BitRegister::D8 => {}
+            Logic8BitRegister::HLI => {}
         }
     }
 
-    fn match_or(&mut self, target: Logic8BitRegister) {
+    fn match_or(&mut self, target: Logic8BitRegister) -> u16 {
         match target {
-            Logic8BitRegister::A => self.register.a = self.or(self.register.a),
-            Logic8BitRegister::B => self.register.b = self.or(self.register.b),
-            Logic8BitRegister::C => self.register.c = self.or(self.register.c),
-            Logic8BitRegister::D => self.register.d = self.or(self.register.d),
-            Logic8BitRegister::E => self.register.e = self.or(self.register.e),
-            Logic8BitRegister::H => self.register.h = self.or(self.register.h),
-            Logic8BitRegister::L => self.register.l = self.or(self.register.l),
-            Logic8BitRegister::D8 => todo!("Not implemented"),
-            Logic8BitRegister::HLI => todo!("Not implemented")
+            Logic8BitRegister::A => self.exec_or(self.register.a),
+            Logic8BitRegister::B => self.exec_or(self.register.b),
+            Logic8BitRegister::C => self.exec_or(self.register.c),
+            Logic8BitRegister::D => self.exec_or(self.register.d),
+            Logic8BitRegister::E => self.exec_or(self.register.e),
+            Logic8BitRegister::H => self.exec_or(self.register.h),
+            Logic8BitRegister::L => self.exec_or(self.register.l),
+            Logic8BitRegister::D8 => {}
+            Logic8BitRegister::HLI => {}
         }
     }
 
-    fn match_xor(&mut self, target: Logic8BitRegister) {
+    fn match_xor(&mut self, target: Logic8BitRegister) -> u16 {
         match target {
-            Logic8BitRegister::A => self.register.a = self.xor(self.register.a),
-            Logic8BitRegister::B => self.register.b = self.xor(self.register.b),
-            Logic8BitRegister::C => self.register.c = self.xor(self.register.c),
-            Logic8BitRegister::D => self.register.d = self.xor(self.register.d),
-            Logic8BitRegister::E => self.register.e = self.xor(self.register.e),
-            Logic8BitRegister::H => self.register.h = self.xor(self.register.h),
-            Logic8BitRegister::L => self.register.l = self.xor(self.register.l),
-            Logic8BitRegister::D8 => todo!("Not implemented"),
-            Logic8BitRegister::HLI => todo!("Not implemented")
+            Logic8BitRegister::A => self.exec_xor(self.register.a),
+            Logic8BitRegister::B => self.exec_xor(self.register.b),
+            Logic8BitRegister::C => self.exec_xor(self.register.c),
+            Logic8BitRegister::D => self.exec_xor(self.register.d),
+            Logic8BitRegister::E => self.exec_xor(self.register.e),
+            Logic8BitRegister::H => self.exec_xor(self.register.h),
+            Logic8BitRegister::L => self.exec_xor(self.register.l),
+            Logic8BitRegister::D8 => {}
+            Logic8BitRegister::HLI => {}
         }
     }
 
-    fn match_cp(&mut self, target: Logic8BitRegister) {
+    fn match_cp(&mut self, target: Logic8BitRegister) -> u16 {
         match target {
             Logic8BitRegister::A => self.exec_compare(self.register.a),
             Logic8BitRegister::B => self.exec_compare(self.register.b),
@@ -139,39 +139,54 @@ impl CPU {
     }
 
     fn step(&mut self) {
-        let mut instruction_byte = self.memory.read_byte(self.pc);
+        let instruction_byte = self.memory.read_byte(self.pc);
+        let next_pc = if let Some(instruction) = Instruction::from_byte(instruction_byte) {
+            self.execute(instruction)
+        } else {
+            panic!("Unknown instruction: 0x{:x}", instruction_byte);
+        };
+
+        self.pc = next_pc;
     }
 
-    fn exec_add(&mut self, value_from_register: u8, with_carry: bool) {
+    fn exec_add(&mut self, value_from_register: u8, with_carry: bool) -> u16 {
         self.register.a = self.add(value_from_register, with_carry);
+        return self.pc.wrapping_add(1);
     }
 
-    fn exec_sub(&mut self, value_from_register: u8, with_carry: bool) {
+    fn exec_sub(&mut self, value_from_register: u8, with_carry: bool) -> u16 {
         self.register.a = self.sub(value_from_register, with_carry);
+        return self.pc.wrapping_add(1);
     }
 
-    fn exec_inc(&mut self, value_from_register: u8) {
+    fn exec_inc(&mut self, value_from_register: u8) -> u16 {
         self.register.a = self.inc(value_from_register);
+        return self.pc.wrapping_add(1);
     }
 
-    fn exec_dec(&mut self, value_from_register: u8) {
+    fn exec_dec(&mut self, value_from_register: u8) -> u16 {
         self.register.a = self.dec(value_from_register);
+        return self.pc.wrapping_add(1);
     }
 
-    fn exec_and(&mut self, value_from_register: u8) {
+    fn exec_and(&mut self, value_from_register: u8) -> u16 {
         self.register.a = self.and(value_from_register);
+        return self.pc.wrapping_add(1);
     }
 
-    fn exec_or(&mut self, value_from_register: u8) {
+    fn exec_or(&mut self, value_from_register: u8) -> u16 {
         self.register.a = self.or(value_from_register);
+        return self.pc.wrapping_add(1);
     }
 
-    fn exec_xor(&mut self, value_from_register: u8) {
+    fn exec_xor(&mut self, value_from_register: u8) -> u16 {
         self.register.a = self.xor(value_from_register);
+        return self.pc.wrapping_add(1);
     }
 
-    fn exec_compare(&mut self, value_from_register: u8) {
-       self.compare(value_from_register);
+    fn exec_compare(&mut self, value_from_register: u8) -> u16 {
+        self.compare(value_from_register);
+        return self.pc.wrapping_add(1);
     }
 
     fn add(&mut self, value: u8, add_carry: bool) -> u8 {

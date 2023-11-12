@@ -33,7 +33,7 @@ pub enum Logic16BitRegister {
 }
 
 impl Instruction {
-    fn from_byte(byte: u8) -> Option<Instruction> {
+    pub fn from_byte(byte: u8) -> Option<Instruction> {
         match byte {
             0x3c => Some(Instruction::INC(Logic8BitRegister::A)),
             0x04 => Some(Instruction::INC(Logic8BitRegister::B)),
