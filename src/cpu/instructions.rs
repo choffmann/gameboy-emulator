@@ -33,7 +33,25 @@ pub enum Logic16BitRegister {
 }
 
 impl Instruction {
-    pub fn from_byte(byte: u8) -> Option<Instruction> {
+    pub fn from_byte(byte: u8, prefix: bool) -> Option<Instruction> {
+        return if prefix {
+            Instruction::from_byte_without_prefix(byte)
+        } else {
+            Instruction::from_byte_with_prefix(byte)
+        }
+    }
+
+    fn from_byte_with_prefix(byte: u8) -> Option<Instruction> {
+       match byte {
+
+           _ => {
+               println!("Missing byte Instruction 0x{:x}", byte);
+               None
+           }
+       }
+    }
+
+    fn from_byte_without_prefix(byte: u8) -> Option<Instruction> {
         match byte {
             0x3c => Some(Instruction::INC(Logic8BitRegister::A)),
             0x04 => Some(Instruction::INC(Logic8BitRegister::B)),

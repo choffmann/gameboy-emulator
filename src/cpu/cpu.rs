@@ -139,11 +139,16 @@ impl CPU {
     }
 
     fn step(&mut self) {
-        let instruction_byte = self.memory.read_byte(self.pc);
-        let next_pc = if let Some(instruction) = Instruction::from_byte(instruction_byte) {
+        let mut instruction_byte = self.memory.read_byte(self.pc);
+        let prefixed = instruction_byte == 0xcb;
+        if prefixed {
+            instruction_byte = self.memory.read_byte(self.pc + 1);
+        }
+        let next_pc = if let Some(instruction) = Instruction::from_byte(instruction_byte, prefixed) {
             self.execute(instruction)
         } else {
-            panic!("Unknown instruction: 0x{:x}", instruction_byte);
+            let description = format!("0x{}{:x}", if prefixed { "cb" } else { "" }, instruction_byte);
+            panic!("Unknown instruction: {}", description);
         };
 
         self.pc = next_pc;
