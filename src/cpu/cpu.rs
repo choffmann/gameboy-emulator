@@ -12,6 +12,14 @@ pub struct CPU {
 }
 
 impl CPU {
+    pub fn boot() -> CPU {
+        println!("Starting CPU...");
+        CPU {
+            register: Registers::new(),
+            pc: 0x0,
+            memory: Memory::new()
+        }
+    }
     pub fn execute(&mut self, instructions: Instruction) -> u16 {
         match instructions {
             Instruction::ADD(target) => self.match_add(target, false),
@@ -106,8 +114,8 @@ impl CPU {
             Logic8BitRegister::E => self.exec_and(self.register.e),
             Logic8BitRegister::H => self.exec_and(self.register.h),
             Logic8BitRegister::L => self.exec_and(self.register.l),
-            Logic8BitRegister::D8 => {}
-            Logic8BitRegister::HLI => {}
+            Logic8BitRegister::D8 => todo!("Not implemented"),
+            Logic8BitRegister::HLI => todo!("Not implemented")
         }
     }
 
@@ -120,8 +128,8 @@ impl CPU {
             Logic8BitRegister::E => self.exec_or(self.register.e),
             Logic8BitRegister::H => self.exec_or(self.register.h),
             Logic8BitRegister::L => self.exec_or(self.register.l),
-            Logic8BitRegister::D8 => {}
-            Logic8BitRegister::HLI => {}
+            Logic8BitRegister::D8 => todo!("Not implemented"),
+            Logic8BitRegister::HLI => todo!("Not implemented")
         }
     }
 
@@ -134,8 +142,8 @@ impl CPU {
             Logic8BitRegister::E => self.exec_xor(self.register.e),
             Logic8BitRegister::H => self.exec_xor(self.register.h),
             Logic8BitRegister::L => self.exec_xor(self.register.l),
-            Logic8BitRegister::D8 => {}
-            Logic8BitRegister::HLI => {}
+            Logic8BitRegister::D8 => todo!("Not implemented"),
+            Logic8BitRegister::HLI => todo!("Not implemented")
         }
     }
 
@@ -148,8 +156,8 @@ impl CPU {
             Logic8BitRegister::E => self.exec_compare(self.register.e),
             Logic8BitRegister::H => self.exec_compare(self.register.h),
             Logic8BitRegister::L => self.exec_compare(self.register.l),
-            Logic8BitRegister::D8 => {}
-            Logic8BitRegister::HLI => {}
+            Logic8BitRegister::D8 => todo!("Not implemented"),
+            Logic8BitRegister::HLI => todo!("Not implemented")
         }
     }
 
@@ -222,13 +230,15 @@ impl CPU {
     }
 
     fn add(&mut self, value: u8, add_carry: bool) -> u8 {
+        println!("Execute ADD: {:x} + {:x}", self.register.a, value);
         let carry_value = self.get_opt_carry_flag(add_carry);
         let (add, frist_did_overflow) = self.register.a.overflowing_add(value);
         let (new_value, result_did_overflow) = add.overflowing_add(carry_value);
         self.register.f.zero = new_value == 0;
-        self.register.f.substract = false;
+        self.register.f.subtract = false;
         self.register.f.carry = frist_did_overflow || result_did_overflow;
         self.register.f.half_carry = ((self.register.a & 0xf) + (value & 0xf) + carry_value) > 0xf;
+        println!("Calculated value: {:x}", value);
         return new_value;
     }
 
@@ -237,7 +247,7 @@ impl CPU {
         let (sub, first_did_overflow) = self.register.a.overflowing_sub(value);
         let (new_value, result_did_overflow) = sub.overflowing_sub(sub);
         self.register.f.zero = new_value == 0;
-        self.register.f.substract = true;
+        self.register.f.subtract = true;
         self.register.f.carry = first_did_overflow || result_did_overflow;
         self.register.f.half_carry = (self.register.a & 0xf) < (value & 0xf) + carry_value;
         return new_value;
@@ -246,7 +256,7 @@ impl CPU {
     fn inc(&mut self, value: u8) -> u8 {
         let new_value = value.wrapping_add(1);
         self.register.f.zero = new_value == 0;
-        self.register.f.substract = false;
+        self.register.f.subtract = false;
         self.register.f.half_carry = value & 0xf == 0xf;
         return new_value;
     }
@@ -254,7 +264,7 @@ impl CPU {
     fn dec(&mut self, value: u8) -> u8 {
         let new_value = value.wrapping_sub(1);
         self.register.f.zero = new_value == 0;
-        self.register.f.substract = true;
+        self.register.f.subtract = true;
         self.register.f.half_carry = value & 0xf == 0x0;
         return new_value;
     }
@@ -262,7 +272,7 @@ impl CPU {
     fn and(&mut self, value: u8) -> u8 {
         let new_value = self.register.a & value;
         self.register.f.zero = new_value == 0;
-        self.register.f.substract = false;
+        self.register.f.subtract = false;
         self.register.f.half_carry = true;
         self.register.f.carry = false;
         return new_value;
@@ -271,7 +281,7 @@ impl CPU {
     fn or(&mut self, value: u8) -> u8 {
         let new_value = self.register.a | value;
         self.register.f.zero = new_value == 0;
-        self.register.f.substract = false;
+        self.register.f.subtract = false;
         self.register.f.carry = false;
         self.register.f.half_carry = false;
         return new_value;
@@ -280,7 +290,7 @@ impl CPU {
     fn xor(&mut self, value: u8) -> u8 {
         let new_value = self.register.a ^ value;
         self.register.f.zero = new_value == 0;
-        self.register.f.substract = false;
+        self.register.f.subtract = false;
         self.register.f.carry = false;
         self.register.f.half_carry = false;
         return new_value;
@@ -288,7 +298,7 @@ impl CPU {
 
     fn compare(&mut self, value: u8) {
         self.register.f.zero = self.register.a == value;
-        self.register.f.substract = true;
+        self.register.f.subtract = true;
         self.register.f.half_carry = (self.register.a & 0xf) < (value & 0xf);
         self.register.f.carry = self.register.a < value;
     }

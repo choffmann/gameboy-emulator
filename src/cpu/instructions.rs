@@ -51,9 +51,9 @@ pub enum JumpCondition {
 impl Instruction {
     pub fn from_byte(byte: u8, prefix: bool) -> Option<Instruction> {
         return if prefix {
-            Instruction::from_byte_without_prefix(byte)
-        } else {
             Instruction::from_byte_with_prefix(byte)
+        } else {
+            Instruction::from_byte_without_prefix(byte)
         };
     }
 

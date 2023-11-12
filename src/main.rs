@@ -1,6 +1,11 @@
+use crate::cpu::cpu::CPU;
+use crate::cpu::instructions::Instruction;
+
 mod cpu;
 mod memory;
 
 fn main() {
-    println!("Hello World")
+    let inst = Instruction::from_byte(0x80, false);
+    let mut cpu = CPU::boot();
+    cpu.execute(inst.unwrap());
 }
