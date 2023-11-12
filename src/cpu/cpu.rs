@@ -1,3 +1,4 @@
+use crate::cpu::instructions::JumpCondition;
 use crate::memory::Memory;
 
 use super::instructions::Logic8BitRegister;
@@ -23,7 +24,21 @@ impl CPU {
             Instruction::OR(target) => self.match_or(target),
             Instruction::XOR(target) => self.match_xor(target),
             Instruction::CP(target) => self.match_cp(target),
+            Instruction::JP(jmp_condition) => self.match_jmp_condition(jmp_condition),
+            Instruction::JR(jmp_condition) => self.match_jmp_condition(jmp_condition),
+            Instruction::JPI => self.jump(true),
         }
+    }
+
+    fn match_jmp_condition(&mut self, jump_condition: JumpCondition) -> u16 {
+        let should_jump = match jump_condition {
+            JumpCondition::NotZero => !self.register.f.zero,
+            JumpCondition::NotCarry => !self.register.f.carry,
+            JumpCondition::Zero => self.register.f.zero,
+            JumpCondition::Carry => self.register.f.carry,
+            JumpCondition::Always => true
+        };
+        return self.jump(should_jump);
     }
 
     fn match_add(&mut self, target: Logic8BitRegister, with_carry: bool) -> u16 {
@@ -152,6 +167,18 @@ impl CPU {
         };
 
         self.pc = next_pc;
+    }
+
+    fn jump(&self, should_jump: bool) -> u16 {
+        return if should_jump {
+            let least_sign_byte = self.memory.read_byte(self.pc + 1) as u16;
+            let most_sign_byte = self.memory.read_byte(self.pc + 2) as u16;
+            (most_sign_byte << 8) | least_sign_byte
+        } else {
+            // If not jump, need counter to froward by 3
+            // (1 byte for tag and 2 bytes fow jump address)
+            self.pc.wrapping_add(3)
+        };
     }
 
     fn exec_add(&mut self, value_from_register: u8, with_carry: bool) -> u16 {

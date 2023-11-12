@@ -1,4 +1,3 @@
-
 #[derive(Debug)]
 pub enum Instruction {
     // Arithmetic Instructions
@@ -11,7 +10,12 @@ pub enum Instruction {
     AND(Logic8BitRegister),
     OR(Logic8BitRegister),
     XOR(Logic8BitRegister),
-    CP(Logic8BitRegister)
+    CP(Logic8BitRegister),
+
+    // Jump Instructions
+    JP(JumpCondition),
+    JR(JumpCondition),
+    JPI
 }
 
 #[derive(Debug)]
@@ -29,7 +33,19 @@ pub enum Logic8BitRegister {
 
 #[derive(Debug)]
 pub enum Logic16BitRegister {
-    BC, DE, HL, SP
+    BC,
+    DE,
+    HL,
+    SP,
+}
+
+#[derive(Debug)]
+pub enum JumpCondition {
+    NotZero,
+    NotCarry,
+    Zero,
+    Carry,
+    Always,
 }
 
 impl Instruction {
@@ -38,17 +54,16 @@ impl Instruction {
             Instruction::from_byte_without_prefix(byte)
         } else {
             Instruction::from_byte_with_prefix(byte)
-        }
+        };
     }
 
     fn from_byte_with_prefix(byte: u8) -> Option<Instruction> {
-       match byte {
-
-           _ => {
-               println!("Missing byte Instruction 0x{:x}", byte);
-               None
-           }
-       }
+        match byte {
+            _ => {
+                println!("Missing byte Instruction 0x{:x}", byte);
+                None
+            }
+        }
     }
 
     fn from_byte_without_prefix(byte: u8) -> Option<Instruction> {
@@ -143,6 +158,19 @@ impl Instruction {
             0x25 => Some(Instruction::DEC(Logic8BitRegister::H)),
             0x2d => Some(Instruction::DEC(Logic8BitRegister::L)),
             0x35 => Some(Instruction::DEC(Logic8BitRegister::HLI)),
+
+            0xc2 => Some(Instruction::JP(JumpCondition::NotZero)),
+            0xca => Some(Instruction::JP(JumpCondition::Zero)),
+            0xd2 => Some(Instruction::JP(JumpCondition::NotCarry)),
+            0xda => Some(Instruction::JP(JumpCondition::Carry)),
+
+            0x20 => Some(Instruction::JR(JumpCondition::NotZero)),
+            0x28 => Some(Instruction::JR(JumpCondition::Zero)),
+            0x30 => Some(Instruction::JR(JumpCondition::NotCarry)),
+            0x38 => Some(Instruction::JR(JumpCondition::Carry)),
+            0x18 => Some(Instruction::JR(JumpCondition::Always)),
+
+            0xe9 => Some(Instruction::JPI),
 
             _ => {
                 println!("Missing byte Instruction 0x{:x}", byte);
