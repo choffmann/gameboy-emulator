@@ -8,12 +8,26 @@ pub struct Memory {
 }
 
 impl Memory {
-    pub fn new() -> Memory {
-        Memory {
+    pub fn new(boot_room: Vec<u8>) -> Memory {
+        let mut memory = Memory {
             memory: [0; 0xFFFF]
+        };
+
+        println!("[MEM] Loading bootstrap rom...");
+        for (idx, value) in boot_room.iter().enumerate() {
+            memory.write_byte(idx as u16, value.clone());
         }
+
+        return memory;
     }
+    pub fn write_byte(&mut self, address: u16, value: u8) {
+        println!("[MEM] Writing memory: address: 0x{:x} value: 0x{:x}", address, value);
+        self.memory[address as usize] = value;
+    }
+
     pub fn read_byte(&self, address: u16) -> u8 {
-        self.memory[address as usize]
+        let mem_value = self.memory[address as usize];
+        println!("[MEM] Reading memory: address: 0x{:x} value: 0x{:x}", address, mem_value);
+        return mem_value;
     }
 }

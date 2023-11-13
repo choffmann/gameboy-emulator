@@ -1,7 +1,7 @@
 use crate::cpu::instructions::JumpCondition;
 use crate::memory::Memory;
 
-use super::instructions::Logic8BitRegister;
+use super::instructions::Register8Bit;
 use super::instructions::Instruction;
 use super::registers::Registers;
 
@@ -12,12 +12,12 @@ pub struct CPU {
 }
 
 impl CPU {
-    pub fn boot() -> CPU {
-        println!("Starting CPU...");
+    pub fn boot(boot_rom: Vec<u8>) -> CPU {
+        println!("[CPU] Starting CPU...");
         CPU {
             register: Registers::new(),
             pc: 0x0,
-            memory: Memory::new()
+            memory: Memory::new(boot_rom),
         }
     }
     pub fn execute(&mut self, instructions: Instruction) -> u16 {
@@ -35,6 +35,11 @@ impl CPU {
             Instruction::JP(jmp_condition) => self.match_jmp_condition(jmp_condition),
             Instruction::JR(jmp_condition) => self.match_jmp_condition(jmp_condition),
             Instruction::JPI => self.jump(true),
+            Instruction::NOP => self.pc.wrapping_add(1),
+            Instruction::LD(source, target) => {
+                println!("[CPU] LD {} to {}", source.to_string(), target.to_string());
+                return self.pc.wrapping_add(1);
+            }
         }
     }
 
@@ -49,119 +54,119 @@ impl CPU {
         return self.jump(should_jump);
     }
 
-    fn match_add(&mut self, target: Logic8BitRegister, with_carry: bool) -> u16 {
+    fn match_add(&mut self, target: Register8Bit, with_carry: bool) -> u16 {
         match target {
-            Logic8BitRegister::A => self.exec_add(self.register.a, with_carry),
-            Logic8BitRegister::B => self.exec_add(self.register.b, with_carry),
-            Logic8BitRegister::C => self.exec_add(self.register.c, with_carry),
-            Logic8BitRegister::D => self.exec_add(self.register.d, with_carry),
-            Logic8BitRegister::E => self.exec_add(self.register.e, with_carry),
-            Logic8BitRegister::H => self.exec_add(self.register.h, with_carry),
-            Logic8BitRegister::L => self.exec_add(self.register.l, with_carry),
-            Logic8BitRegister::D8 => todo!("Not implemented"),
-            Logic8BitRegister::HLI => todo!("Not implemented"),
+            Register8Bit::A => self.exec_add(self.register.a, with_carry),
+            Register8Bit::B => self.exec_add(self.register.b, with_carry),
+            Register8Bit::C => self.exec_add(self.register.c, with_carry),
+            Register8Bit::D => self.exec_add(self.register.d, with_carry),
+            Register8Bit::E => self.exec_add(self.register.e, with_carry),
+            Register8Bit::H => self.exec_add(self.register.h, with_carry),
+            Register8Bit::L => self.exec_add(self.register.l, with_carry),
+            Register8Bit::D8 => self.exec_add(self.read_next_mem(), with_carry),
+            Register8Bit::HLI => todo!("Not implemented"),
         }
     }
 
-    fn match_inc(&mut self, target: Logic8BitRegister) -> u16 {
+    fn match_inc(&mut self, target: Register8Bit) -> u16 {
         match target {
-            Logic8BitRegister::A => self.exec_inc(self.register.a),
-            Logic8BitRegister::B => self.exec_inc(self.register.b),
-            Logic8BitRegister::C => self.exec_inc(self.register.c),
-            Logic8BitRegister::D => self.exec_inc(self.register.d),
-            Logic8BitRegister::E => self.exec_inc(self.register.e),
-            Logic8BitRegister::H => self.exec_inc(self.register.h),
-            Logic8BitRegister::L => self.exec_inc(self.register.l),
-            Logic8BitRegister::D8 => todo!("Not implemented"),
-            Logic8BitRegister::HLI => todo!("Not implemented")
+            Register8Bit::A => self.exec_inc(self.register.a),
+            Register8Bit::B => self.exec_inc(self.register.b),
+            Register8Bit::C => self.exec_inc(self.register.c),
+            Register8Bit::D => self.exec_inc(self.register.d),
+            Register8Bit::E => self.exec_inc(self.register.e),
+            Register8Bit::H => self.exec_inc(self.register.h),
+            Register8Bit::L => self.exec_inc(self.register.l),
+            Register8Bit::D8 => self.exec_inc(self.read_next_mem()),
+            Register8Bit::HLI => todo!("Not implemented")
         }
     }
 
-    fn match_dec(&mut self, target: Logic8BitRegister) -> u16 {
+    fn match_dec(&mut self, target: Register8Bit) -> u16 {
         match target {
-            Logic8BitRegister::A => self.exec_dec(self.register.a),
-            Logic8BitRegister::B => self.exec_dec(self.register.b),
-            Logic8BitRegister::C => self.exec_dec(self.register.c),
-            Logic8BitRegister::D => self.exec_dec(self.register.d),
-            Logic8BitRegister::E => self.exec_dec(self.register.e),
-            Logic8BitRegister::H => self.exec_dec(self.register.h),
-            Logic8BitRegister::L => self.exec_dec(self.register.l),
-            Logic8BitRegister::D8 => todo!("Not implemented"),
-            Logic8BitRegister::HLI => todo!("Not implemented")
+            Register8Bit::A => self.exec_dec(self.register.a),
+            Register8Bit::B => self.exec_dec(self.register.b),
+            Register8Bit::C => self.exec_dec(self.register.c),
+            Register8Bit::D => self.exec_dec(self.register.d),
+            Register8Bit::E => self.exec_dec(self.register.e),
+            Register8Bit::H => self.exec_dec(self.register.h),
+            Register8Bit::L => self.exec_dec(self.register.l),
+            Register8Bit::D8 => self.exec_dec(self.read_next_mem()),
+            Register8Bit::HLI => todo!("Not implemented")
         }
     }
 
-    fn match_sub(&mut self, target: Logic8BitRegister, with_carry: bool) -> u16 {
+    fn match_sub(&mut self, target: Register8Bit, with_carry: bool) -> u16 {
         match target {
-            Logic8BitRegister::A => self.exec_sub(self.register.a, with_carry),
-            Logic8BitRegister::B => self.exec_sub(self.register.b, with_carry),
-            Logic8BitRegister::C => self.exec_sub(self.register.c, with_carry),
-            Logic8BitRegister::D => self.exec_sub(self.register.d, with_carry),
-            Logic8BitRegister::E => self.exec_sub(self.register.e, with_carry),
-            Logic8BitRegister::H => self.exec_sub(self.register.h, with_carry),
-            Logic8BitRegister::L => self.exec_sub(self.register.l, with_carry),
-            Logic8BitRegister::D8 => todo!("Not implemented"),
-            Logic8BitRegister::HLI => todo!("Not implemented")
+            Register8Bit::A => self.exec_sub(self.register.a, with_carry),
+            Register8Bit::B => self.exec_sub(self.register.b, with_carry),
+            Register8Bit::C => self.exec_sub(self.register.c, with_carry),
+            Register8Bit::D => self.exec_sub(self.register.d, with_carry),
+            Register8Bit::E => self.exec_sub(self.register.e, with_carry),
+            Register8Bit::H => self.exec_sub(self.register.h, with_carry),
+            Register8Bit::L => self.exec_sub(self.register.l, with_carry),
+            Register8Bit::D8 => self.exec_sub(self.read_next_mem(), with_carry),
+            Register8Bit::HLI => todo!("Not implemented")
         }
     }
 
-    fn match_and(&mut self, target: Logic8BitRegister) -> u16 {
+    fn match_and(&mut self, target: Register8Bit) -> u16 {
         match target {
-            Logic8BitRegister::A => self.exec_and(self.register.a),
-            Logic8BitRegister::B => self.exec_and(self.register.b),
-            Logic8BitRegister::C => self.exec_and(self.register.c),
-            Logic8BitRegister::D => self.exec_and(self.register.d),
-            Logic8BitRegister::E => self.exec_and(self.register.e),
-            Logic8BitRegister::H => self.exec_and(self.register.h),
-            Logic8BitRegister::L => self.exec_and(self.register.l),
-            Logic8BitRegister::D8 => todo!("Not implemented"),
-            Logic8BitRegister::HLI => todo!("Not implemented")
+            Register8Bit::A => self.exec_and(self.register.a),
+            Register8Bit::B => self.exec_and(self.register.b),
+            Register8Bit::C => self.exec_and(self.register.c),
+            Register8Bit::D => self.exec_and(self.register.d),
+            Register8Bit::E => self.exec_and(self.register.e),
+            Register8Bit::H => self.exec_and(self.register.h),
+            Register8Bit::L => self.exec_and(self.register.l),
+            Register8Bit::D8 => self.exec_and(self.read_next_mem()),
+            Register8Bit::HLI => todo!("Not implemented")
         }
     }
 
-    fn match_or(&mut self, target: Logic8BitRegister) -> u16 {
+    fn match_or(&mut self, target: Register8Bit) -> u16 {
         match target {
-            Logic8BitRegister::A => self.exec_or(self.register.a),
-            Logic8BitRegister::B => self.exec_or(self.register.b),
-            Logic8BitRegister::C => self.exec_or(self.register.c),
-            Logic8BitRegister::D => self.exec_or(self.register.d),
-            Logic8BitRegister::E => self.exec_or(self.register.e),
-            Logic8BitRegister::H => self.exec_or(self.register.h),
-            Logic8BitRegister::L => self.exec_or(self.register.l),
-            Logic8BitRegister::D8 => todo!("Not implemented"),
-            Logic8BitRegister::HLI => todo!("Not implemented")
+            Register8Bit::A => self.exec_or(self.register.a),
+            Register8Bit::B => self.exec_or(self.register.b),
+            Register8Bit::C => self.exec_or(self.register.c),
+            Register8Bit::D => self.exec_or(self.register.d),
+            Register8Bit::E => self.exec_or(self.register.e),
+            Register8Bit::H => self.exec_or(self.register.h),
+            Register8Bit::L => self.exec_or(self.register.l),
+            Register8Bit::D8 => self.exec_or(self.read_next_mem()),
+            Register8Bit::HLI => todo!("Not implemented")
         }
     }
 
-    fn match_xor(&mut self, target: Logic8BitRegister) -> u16 {
+    fn match_xor(&mut self, target: Register8Bit) -> u16 {
         match target {
-            Logic8BitRegister::A => self.exec_xor(self.register.a),
-            Logic8BitRegister::B => self.exec_xor(self.register.b),
-            Logic8BitRegister::C => self.exec_xor(self.register.c),
-            Logic8BitRegister::D => self.exec_xor(self.register.d),
-            Logic8BitRegister::E => self.exec_xor(self.register.e),
-            Logic8BitRegister::H => self.exec_xor(self.register.h),
-            Logic8BitRegister::L => self.exec_xor(self.register.l),
-            Logic8BitRegister::D8 => todo!("Not implemented"),
-            Logic8BitRegister::HLI => todo!("Not implemented")
+            Register8Bit::A => self.exec_xor(self.register.a),
+            Register8Bit::B => self.exec_xor(self.register.b),
+            Register8Bit::C => self.exec_xor(self.register.c),
+            Register8Bit::D => self.exec_xor(self.register.d),
+            Register8Bit::E => self.exec_xor(self.register.e),
+            Register8Bit::H => self.exec_xor(self.register.h),
+            Register8Bit::L => self.exec_xor(self.register.l),
+            Register8Bit::D8 => self.exec_xor(self.read_next_mem()),
+            Register8Bit::HLI => todo!("Not implemented")
         }
     }
 
-    fn match_cp(&mut self, target: Logic8BitRegister) -> u16 {
+    fn match_cp(&mut self, target: Register8Bit) -> u16 {
         match target {
-            Logic8BitRegister::A => self.exec_compare(self.register.a),
-            Logic8BitRegister::B => self.exec_compare(self.register.b),
-            Logic8BitRegister::C => self.exec_compare(self.register.c),
-            Logic8BitRegister::D => self.exec_compare(self.register.d),
-            Logic8BitRegister::E => self.exec_compare(self.register.e),
-            Logic8BitRegister::H => self.exec_compare(self.register.h),
-            Logic8BitRegister::L => self.exec_compare(self.register.l),
-            Logic8BitRegister::D8 => todo!("Not implemented"),
-            Logic8BitRegister::HLI => todo!("Not implemented")
+            Register8Bit::A => self.exec_compare(self.register.a),
+            Register8Bit::B => self.exec_compare(self.register.b),
+            Register8Bit::C => self.exec_compare(self.register.c),
+            Register8Bit::D => self.exec_compare(self.register.d),
+            Register8Bit::E => self.exec_compare(self.register.e),
+            Register8Bit::H => self.exec_compare(self.register.h),
+            Register8Bit::L => self.exec_compare(self.register.l),
+            Register8Bit::D8 => self.exec_compare(self.read_next_mem()),
+            Register8Bit::HLI => todo!("Not implemented")
         }
     }
 
-    fn step(&mut self) {
+    pub fn step(&mut self) {
         let mut instruction_byte = self.memory.read_byte(self.pc);
         let prefixed = instruction_byte == 0xcb;
         if prefixed {
@@ -184,9 +189,13 @@ impl CPU {
             (most_sign_byte << 8) | least_sign_byte
         } else {
             // If not jump, need counter to froward by 3
-            // (1 byte for tag and 2 bytes fow jump address)
+            // (1 byte for tag and 2 bytes for jump address)
             self.pc.wrapping_add(3)
         };
+    }
+
+    fn read_next_mem(&self) -> u8 {
+        return self.memory.read_byte(self.pc.wrapping_add(1));
     }
 
     fn exec_add(&mut self, value_from_register: u8, with_carry: bool) -> u16 {
@@ -230,7 +239,7 @@ impl CPU {
     }
 
     fn add(&mut self, value: u8, add_carry: bool) -> u8 {
-        println!("Execute ADD: {:x} + {:x}", self.register.a, value);
+        println!("[CPU] Execute ADD: {:x} + {:x}", self.register.a, value);
         let carry_value = self.get_opt_carry_flag(add_carry);
         let (add, frist_did_overflow) = self.register.a.overflowing_add(value);
         let (new_value, result_did_overflow) = add.overflowing_add(carry_value);
@@ -238,7 +247,7 @@ impl CPU {
         self.register.f.subtract = false;
         self.register.f.carry = frist_did_overflow || result_did_overflow;
         self.register.f.half_carry = ((self.register.a & 0xf) + (value & 0xf) + carry_value) > 0xf;
-        println!("Calculated value: {:x}", value);
+        println!("[CPU] Calculated value: {:x}", value);
         return new_value;
     }
 
@@ -312,6 +321,6 @@ impl CPU {
     }
 }
 
-fn print_missing_register(instruction: &str, target: Logic8BitRegister) {
+fn print_missing_register(instruction: &str, target: Register8Bit) {
     unimplemented!("Missing instruction {} for register {:?}", instruction, target);
 }
