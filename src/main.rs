@@ -1,4 +1,3 @@
-use std::io::Read;
 use crate::cpu::cpu::CPU;
 
 mod cpu;
