@@ -1,5 +1,6 @@
 use super::Register;
 
+#[derive(Clone)]
 pub struct StackPointer {
     name: String,
     value: u16

@@ -23,6 +23,7 @@ pub enum Instruction {
     // Load Instructions
     LD(Target8Bit, Target8Bit),
     LDN(Target16Bit, Source16Bit),
+    LDD
 }
 
 #[derive(Debug)]
@@ -46,7 +47,7 @@ pub enum Target16Bit {
     SP,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub enum Source16Bit {
     BC,
     DE,
@@ -332,6 +333,8 @@ impl Instruction {
             0x11 => Some(Instruction::LDN(Target16Bit::DE, Source16Bit::NN)),
             0x21 => Some(Instruction::LDN(Target16Bit::HL, Source16Bit::NN)),
             0x31 => Some(Instruction::LDN(Target16Bit::SP, Source16Bit::NN)),
+
+            0x32 => Some(Instruction::LDD),
 
             _ => {
                 eprintln!("[INS] Missing byte Instruction 0x{:x}", byte);

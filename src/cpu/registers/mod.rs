@@ -3,11 +3,12 @@ use super::registers::register::Register;
 use super::registers::register_8bit::Register8Bit;
 use super::registers::stack_pointer::StackPointer;
 
-mod flag_register;
+pub(crate) mod flag_register;
 mod register;
 mod register_8bit;
 mod stack_pointer;
 
+#[derive(Clone)]
 pub struct Registers {
     a: Register8Bit,
     b: Register8Bit,
@@ -104,7 +105,7 @@ impl Registers {
         self.a.set(value);
     }
 
-    pub fn read_a(&mut self) -> u8 {
+    pub fn read_a(&self) -> u8 {
         return self.a.get();
     }
 

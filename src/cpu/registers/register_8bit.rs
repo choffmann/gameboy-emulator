@@ -1,5 +1,6 @@
 use super::register::Register;
 
+#[derive(Clone)]
 pub struct Register8Bit {
     name: String,
     value: u8,

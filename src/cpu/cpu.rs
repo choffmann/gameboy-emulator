@@ -1,4 +1,4 @@
-use crate::cpu::instructions::{JumpCondition, Source16Bit, Target16Bit};
+use crate::cpu::instructions::{JumpCondition, Target16Bit};
 use crate::cpu::registers::{Register8BitName, Registers};
 use crate::memory::Memory;
 
@@ -41,7 +41,8 @@ impl CPU {
                 return self.pc.wrapping_add(1);
             }
             Instruction::LDN(target, source) => {
-                return self.match_16bit_load(&target, source);
+                let value = self.register.get_16bit(source.into());
+                return self.match_16bit_load(&target, value);
             }
         }
     }
@@ -61,23 +62,12 @@ impl CPU {
         return self.pc.wrapping_add(1);
     }
 
-    fn match_16bit_load(&mut self, target: &Target16Bit, source: Source16Bit) -> u16 {
+    fn match_16bit_load(&mut self, target: &Target16Bit, value: u16) -> u16 {
         match target {
-            Target16Bit::BC | Target16Bit::DE | Target16Bit::HL | Target16Bit::SP => {
-                // let value = self.register.get_16bit(source.into());
-                let value = match source {
-                    Source16Bit::BC |
-                    Source16Bit::DE |
-                    Source16Bit::HL |
-                    Source16Bit::SP => self.register.get_16bit(source.into()),
-                    Source16Bit::NN => {
-                        let least_sign_byte = self.memory.read_byte(self.pc + 1) as u16;
-                        let most_sign_byte = self.memory.read_byte(self.pc + 2) as u16;
-                        (most_sign_byte << 8) | least_sign_byte
-                    }
-                };
-                self.register.set_16bit(target.into(), value);
-            }
+            Target16Bit::BC => self.register.set_16bit(target.into(), value),
+            Target16Bit::DE => self.register.set_16bit(target.into(), value),
+            Target16Bit::HL => self.register.set_16bit(target.into(), value),
+            Target16Bit::SP => self.register.set_16bit(target.into(), value),
         }
 
         return self.pc.wrapping_add(3);
@@ -370,12 +360,4 @@ impl CPU {
             0
         }
     }
-}
-
-fn print_missing_register(instruction: &str, target: Target8Bit) {
-    unimplemented!(
-        "Missing instruction {} for register {:?}",
-        instruction,
-        target
-    );
 }

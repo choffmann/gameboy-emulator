@@ -3,6 +3,7 @@ pub const BOOT_ROM_END: usize = 0xFF;
 pub const BOOT_ROM_SIZE: usize = BOOT_ROM_END - BOOT_ROM_BEGIN + 1;
 
 
+#[derive(Clone)]
 pub struct Memory {
     pub memory: [u8; 0xFFFF],
 }
@@ -29,5 +30,9 @@ impl Memory {
         let mem_value = self.memory[address as usize];
         println!("[MEM] Reading memory: address: 0x{:x} value: 0x{:x}", address, mem_value);
         return mem_value;
+    }
+
+    pub fn read_next_word(&self, pc: u16) -> u16 {
+        ((self.read_byte(pc + 2) as u16) << 8) | (self.read_byte(pc + 1) as u16)
     }
 }
