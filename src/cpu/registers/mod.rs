@@ -55,7 +55,7 @@ impl Registers {
         }
     }
 
-    pub fn get_8bit(&self, register: Register8BitName) -> u8 {
+    pub fn get_8bit(&self, register: &Register8BitName) -> u8 {
         match register {
             Register8BitName::A => self.a.get(),
             Register8BitName::B => self.b.get(),
@@ -68,7 +68,7 @@ impl Registers {
         }
     }
 
-    pub fn get_16bit(&self, registers: Register16BitName) -> u16 {
+    pub fn get_16bit(&self, registers: &Register16BitName) -> u16 {
         match registers {
             Register16BitName::AF => self.get_af(),
             Register16BitName::BC => self.get_bc(),
@@ -78,7 +78,7 @@ impl Registers {
         }
     }
 
-    pub fn set_8bit(&mut self, register: Register8BitName, value: u8) {
+    pub fn set_8bit(&mut self, register: &Register8BitName, value: u8) {
         match register {
             Register8BitName::A => self.a.set(value),
             Register8BitName::B => self.b.set(value),
@@ -91,7 +91,7 @@ impl Registers {
         }
     }
 
-    pub fn set_16bit(&mut self, register: Register16BitName, value: u16) {
+    pub fn set_16bit(&mut self, register: &Register16BitName, value: u16) {
         match register {
             Register16BitName::AF => self.set_af(value),
             Register16BitName::BC => self.set_bc(value),
