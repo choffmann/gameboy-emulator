@@ -1,5 +1,5 @@
 use crate::cpu::instructions::{JumpCondition, Target16Bit};
-use crate::cpu::registers::Registers;
+use crate::cpu::registers::{Register8BitName, Registers};
 use crate::memory::Memory;
 
 use super::instructions::Target8Bit;
@@ -50,10 +50,7 @@ impl CPU {
                 println!("[CPU] SET 0x{:x} {:?}", value, target);
                 return self.pc.wrapping_add(2);
             }
-            Instruction::LD8(target, source) => {
-                println!("[CPU] LD {:?} to {:?}", source, target);
-                return self.pc.wrapping_add(2);
-            }
+            Instruction::LD8(target, source) => self.match_8bit_load(&target, &source),
             Instruction::LD16(target, source) => {
                 let value = self.match_16bit_load_source(source);
                 return self.match_16bit_load(target, value);
@@ -65,7 +62,25 @@ impl CPU {
                 self.match_dec16(Target16Bit::HL);
                 return self.pc.wrapping_add(1);
             }
+            Instruction::LDC => {
+                let a_value = self.register.read_a();
+                let c_value = self.register.get_8bit(&Register8BitName::C);
+                self.add_memory_ff00(a_value, c_value);
+                return self.pc.wrapping_add(1);
+            }
+            Instruction::LDHA => {
+                let a_value = self.register.read_a();
+                let n = self.read_next_mem();
+                self.add_memory_ff00(a_value, n);
+                return self.pc.wrapping_add(2);
+            }
         }
+    }
+
+
+    fn add_memory_ff00(&mut self, register_value: u8, n: u8) {
+        let address = 0xff00 + (n as u16);
+        self.memory.write_byte(address, register_value);
     }
 
     fn match_bit(&mut self, target: Target8Bit, value: u8) -> u16 {
@@ -90,8 +105,20 @@ impl CPU {
         }
     }
 
-    fn match_8bit_load(&mut self, target: Target8Bit, value: u8) -> u16 {
-        return match target {
+    fn match_8bit_load(&mut self, target: &Target8Bit, source: &Target8Bit) -> u16 {
+        let value = match source {
+            Target8Bit::A |
+            Target8Bit::B |
+            Target8Bit::C |
+            Target8Bit::D |
+            Target8Bit::E |
+            Target8Bit::H |
+            Target8Bit::L => self.register.get_8bit(source.into()),
+            Target8Bit::D8 => self.read_next_mem(),
+            Target8Bit::HLI => self.get_memory_by_hl()
+        };
+
+        match target {
             Target8Bit::A
             | Target8Bit::B
             | Target8Bit::C
@@ -100,14 +127,26 @@ impl CPU {
             | Target8Bit::H
             | Target8Bit::L => {
                 self.register.set_8bit(target.into(), value);
-                self.pc.wrapping_add(1)
             }
             Target8Bit::D8 => {
-                self.pc.wrapping_add(2)
+                self.register.set_8bit(target.into(), value);
             }
             Target8Bit::HLI => {
-                self.pc.wrapping_add(2)
+                let address = self.register.get_16bit(&Register16BitName::HL);
+                self.memory.write_byte(address, value);
             }
+        };
+
+        return match source {
+            Target8Bit::A |
+            Target8Bit::B |
+            Target8Bit::C |
+            Target8Bit::D |
+            Target8Bit::E |
+            Target8Bit::H |
+            Target8Bit::L => self.pc.wrapping_add(1),
+            Target8Bit::D8 |
+            Target8Bit::HLI => self.pc.wrapping_add(2),
         };
     }
 
@@ -179,9 +218,20 @@ impl CPU {
             | Target8Bit::D
             | Target8Bit::E
             | Target8Bit::H
-            | Target8Bit::L => self.exec_inc(self.register.get_8bit(target.into())),
-            Target8Bit::D8 => self.exec_inc(self.read_next_mem()),
-            Target8Bit::HLI => self.exec_inc(self.get_memory_by_hl()),
+            | Target8Bit::L => {
+                let register: &Register8BitName = target.into();
+                let register_value = self.register.get_8bit(register);
+                let value = self.inc(register_value);
+                self.register.set_8bit(register, value);
+                return self.pc.wrapping_add(1);
+            }
+            Target8Bit::HLI => {
+                let register_value = self.get_memory_by_hl();
+                let value = self.inc(register_value);
+                self.memory.write_byte(self.register.get_16bit(&Register16BitName::HL), value);
+                return self.pc.wrapping_add(2);
+            }
+            Target8Bit::D8 => panic!("Should not possible"),
         }
     }
 

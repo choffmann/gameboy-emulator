@@ -27,6 +27,8 @@ pub enum Instruction {
     LD8(Target8Bit, Target8Bit),
     LD16(Target16Bit, Source16Bit),
     LDD,
+    LDC,
+    LDHA,
 
     // CB Flag
     BIT(u8, Target8Bit),
@@ -34,7 +36,7 @@ pub enum Instruction {
     SET(u8, Target8Bit),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Target8Bit {
     A,
     B,
@@ -496,6 +498,7 @@ impl Instruction {
             0x7c => Some(Instruction::LD8(Target8Bit::A, Target8Bit::H)),
             0x7d => Some(Instruction::LD8(Target8Bit::A, Target8Bit::L)),
             0x7e => Some(Instruction::LD8(Target8Bit::A, Target8Bit::HLI)),
+            0x3e => Some(Instruction::LD8(Target8Bit::A, Target8Bit::D8)),
 
             0x40 => Some(Instruction::LD8(Target8Bit::B, Target8Bit::B)),
             0x41 => Some(Instruction::LD8(Target8Bit::B, Target8Bit::C)),
@@ -552,6 +555,7 @@ impl Instruction {
             0x74 => Some(Instruction::LD8(Target8Bit::HLI, Target8Bit::H)),
             0x75 => Some(Instruction::LD8(Target8Bit::HLI, Target8Bit::L)),
             0x36 => Some(Instruction::LD8(Target8Bit::HLI, Target8Bit::D8)),
+            0x77 => Some(Instruction::LD8(Target8Bit::HLI, Target8Bit::A)),
 
             0x01 => Some(Instruction::LD16(Target16Bit::BC, Source16Bit::D16)),
             0x11 => Some(Instruction::LD16(Target16Bit::DE, Source16Bit::D16)),
@@ -574,7 +578,8 @@ impl Instruction {
             0x33 => Some(Instruction::INC16(Target16Bit::SP)),
 
             0x32 => Some(Instruction::LDD),
-
+            0xe2 => Some(Instruction::LDC),
+            0xe0 => Some(Instruction::LDHA),
 
             _ => {
                 eprintln!("[INS] Missing byte Instruction 0x{:x}", byte);
