@@ -34,16 +34,25 @@ impl CPU {
             Instruction::OR(target) => self.match_or(target),
             Instruction::XOR(target) => self.match_xor(target),
             Instruction::CP(target) => self.match_cp(target),
-            Instruction::JP(jmp_condition) => self.match_jmp_condition(jmp_condition),
-            Instruction::JR(jmp_condition) => self.match_jmp_condition(jmp_condition),
+            Instruction::JR(jmp_condition) => self.match_jmp_condition(jmp_condition, true),
+            Instruction::JP(jmp_condition) => self.match_jmp_condition(jmp_condition, false),
             Instruction::JPI => self.jump(true),
             Instruction::NOP => self.pc.wrapping_add(1),
             Instruction::DEC16(target) => self.match_dec16(target),
             Instruction::ADD16(target) => self.match_add16(target),
             Instruction::INC16(target) => self.match_inc16(target),
+            Instruction::BIT(value, target) => self.match_bit(target, value),
+            Instruction::RES(value, target) => {
+                println!("[CPU] RES 0x{:x} {:?}", value, target);
+                return self.pc.wrapping_add(2);
+            }
+            Instruction::SET(value, target) => {
+                println!("[CPU] SET 0x{:x} {:?}", value, target);
+                return self.pc.wrapping_add(2);
+            }
             Instruction::LD8(target, source) => {
                 println!("[CPU] LD {:?} to {:?}", source, target);
-                return self.pc.wrapping_add(1);
+                return self.pc.wrapping_add(2);
             }
             Instruction::LD16(target, source) => {
                 let value = self.match_16bit_load_source(source);
@@ -59,26 +68,54 @@ impl CPU {
         }
     }
 
-    fn match_8bit_load(&mut self, target: Target8Bit, value: u8) -> u16 {
+    fn match_bit(&mut self, target: Target8Bit, value: u8) -> u16 {
         match target {
+            Target8Bit::A |
+            Target8Bit::B |
+            Target8Bit::C |
+            Target8Bit::D |
+            Target8Bit::E |
+            Target8Bit::H |
+            Target8Bit::L => {
+                let register_value = self.register.get_8bit(target.into());
+                self.register.f.zero = (register_value >> value) & 0xf == 0;
+                self.register.f.subtract = false;
+                self.register.f.half_carry = true;
+                return self.pc.wrapping_add(2);
+            }
+            Target8Bit::HLI => {
+                return self.pc.wrapping_add(3);
+            }
+            Target8Bit::D8 => panic!("Should not possible")
+        }
+    }
+
+    fn match_8bit_load(&mut self, target: Target8Bit, value: u8) -> u16 {
+        return match target {
             Target8Bit::A
             | Target8Bit::B
             | Target8Bit::C
             | Target8Bit::D
             | Target8Bit::E
             | Target8Bit::H
-            | Target8Bit::L => self.register.set_8bit(target.into(), value),
-            Target8Bit::D8 => {}
-            Target8Bit::HLI => {}
-        }
-        return self.pc.wrapping_add(1);
+            | Target8Bit::L => {
+                self.register.set_8bit(target.into(), value);
+                self.pc.wrapping_add(1)
+            }
+            Target8Bit::D8 => {
+                self.pc.wrapping_add(2)
+            }
+            Target8Bit::HLI => {
+                self.pc.wrapping_add(2)
+            }
+        };
     }
 
     fn match_16bit_load(&mut self, target: Target16Bit, value: u16) -> u16 {
         match target {
-            Target16Bit::BC => self.register.set_16bit(target.into(), value),
-            Target16Bit::DE => self.register.set_16bit(target.into(), value),
-            Target16Bit::HL => self.register.set_16bit(target.into(), value),
+            Target16Bit::BC |
+            Target16Bit::DE |
+            Target16Bit::HL |
             Target16Bit::SP => self.register.set_16bit(target.into(), value),
         }
 
@@ -95,7 +132,7 @@ impl CPU {
         }
     }
 
-    fn match_jmp_condition(&mut self, jump_condition: JumpCondition) -> u16 {
+    fn match_jmp_condition(&mut self, jump_condition: JumpCondition, relative: bool) -> u16 {
         let should_jump = match jump_condition {
             JumpCondition::NotZero => !self.register.f.zero,
             JumpCondition::NotCarry => !self.register.f.carry,
@@ -103,7 +140,7 @@ impl CPU {
             JumpCondition::Carry => self.register.f.carry,
             JumpCondition::Always => true,
         };
-        return self.jump(should_jump);
+        return if relative { self.jump_relative(should_jump) } else { self.jump(should_jump) };
     }
 
     fn match_add(&mut self, target: Target8Bit, with_carry: bool) -> u16 {
@@ -271,6 +308,9 @@ impl CPU {
         if prefixed {
             instruction_byte = self.memory.read_byte(self.pc + 1);
         }
+        if instruction_byte != 0 {
+            println!("[CPU] Next instruction 0x{:x}", instruction_byte);
+        }
         let next_pc = if let Some(instruction) = Instruction::from_byte(instruction_byte, prefixed)
         {
             self.execute(instruction)
@@ -288,13 +328,27 @@ impl CPU {
 
     fn jump(&self, should_jump: bool) -> u16 {
         return if should_jump {
-            let least_sign_byte = self.memory.read_byte(self.pc + 1) as u16;
-            let most_sign_byte = self.memory.read_byte(self.pc + 2) as u16;
-            (most_sign_byte << 8) | least_sign_byte
+            let jmp_address = self.memory.read_next_word(self.pc);
+            println!("[CPU] Jump to address 0x{:x}", jmp_address);
+            return jmp_address;
         } else {
-            // If not jump, need counter to froward by 3
-            // (1 byte for tag and 2 bytes for jump address)
             self.pc.wrapping_add(3)
+        };
+    }
+
+    fn jump_relative(&self, should_jump: bool) -> u16 {
+        let next_step = self.pc.wrapping_add(2);
+        return if should_jump {
+            let offset = self.memory.read_byte(self.pc + 1) as i8;
+            let jmp_address = if offset >= 0 {
+                next_step.wrapping_add(offset as u16)
+            } else {
+                next_step.wrapping_sub(offset.abs() as u16)
+            };
+            println!("[CPU] Jump to address 0x{:x}", jmp_address);
+            return jmp_address;
+        } else {
+            next_step
         };
     }
 
