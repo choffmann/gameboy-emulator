@@ -74,9 +74,35 @@ impl CPU {
                 self.add_memory_ff00(a_value, n);
                 return self.pc.wrapping_add(2);
             }
+            Instruction::PUSH(target) => {
+                println!("[CPU] PUSH {:?}", target);
+                return self.pc.wrapping_add(1);
+            }
+            Instruction::POP(target) => {
+                println!("[CPU] POP {:?}", target);
+                return self.pc.wrapping_add(1);
+            }
         }
     }
 
+    fn push(&mut self, value: u16) {
+        let sp_value = self.register.get_16bit(&Register16BitName::SP).wrapping_sub(1);
+        self.register.set_16bit(&Register16BitName::SP, sp_value);
+        self.memory.write_byte(sp_value, ((value & 0xff00) >> 8) as u8);
+
+        let sp_value = self.register.get_16bit(&Register16BitName::SP).wrapping_sub(1);
+        self.register.set_16bit(&Register16BitName::SP, sp_value);
+        self.memory.write_byte(sp_value, (value & 0xff) as u8);
+    }
+
+    fn pop(&mut self) -> u16 {
+        let lsb = self.memory.read_byte(self.register.get_16bit(&Register16BitName::SP)) as u16;
+        self.register.set_16bit(&Register16BitName::SP, self.register.get_16bit(&Register16BitName::SP).wrapping_add(1));
+
+        let msb = self.memory.read_byte(self.register.get_16bit(&Register16BitName::SP)) as u16;
+        self.register.set_16bit(&Register16BitName::SP, self.register.get_16bit(&Register16BitName::SP).wrapping_add(1));
+        return (msb << 8) | lsb;
+    }
 
     fn add_memory_ff00(&mut self, register_value: u8, n: u8) {
         let address = 0xff00 + (n as u16);

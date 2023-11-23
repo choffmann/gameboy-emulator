@@ -3,6 +3,8 @@ use super::registers::{Register16BitName, Register8BitName};
 #[derive(Debug)]
 pub enum Instruction {
     NOP,
+    PUSH(StackTarget),
+    POP(StackTarget),
     // Arithmetic Instructions
     ADD(Target8Bit),
     ADC(Target8Bit),
@@ -34,6 +36,15 @@ pub enum Instruction {
     BIT(u8, Target8Bit),
     RES(u8, Target8Bit),
     SET(u8, Target8Bit),
+}
+
+
+#[derive(Debug)]
+pub enum StackTarget {
+    AF,
+    BC,
+    DE,
+    HL,
 }
 
 #[derive(Debug, PartialEq)]
@@ -580,6 +591,16 @@ impl Instruction {
             0x32 => Some(Instruction::LDD),
             0xe2 => Some(Instruction::LDC),
             0xe0 => Some(Instruction::LDHA),
+
+            0xf5 => Some(Instruction::PUSH(StackTarget::AF)),
+            0xc5 => Some(Instruction::PUSH(StackTarget::BC)),
+            0xd5 => Some(Instruction::PUSH(StackTarget::DE)),
+            0xe5 => Some(Instruction::PUSH(StackTarget::HL)),
+
+            0xf1 => Some(Instruction::POP(StackTarget::AF)),
+            0xc1 => Some(Instruction::POP(StackTarget::BC)),
+            0xd1 => Some(Instruction::POP(StackTarget::DE)),
+            0xe1 => Some(Instruction::POP(StackTarget::HL)),
 
             _ => {
                 eprintln!("[INS] Missing byte Instruction 0x{:x}", byte);
