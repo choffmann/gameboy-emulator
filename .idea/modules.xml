@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/.idea/gameboy.iml" filepath="$PROJECT_DIR$/.idea/gameboy.iml" />
+      <module fileurl="file://$PROJECT_DIR$/gameboy-frontend.iml" filepath="$PROJECT_DIR$/gameboy-frontend.iml" />
     </modules>
   </component>
 </project>
