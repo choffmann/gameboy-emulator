@@ -4,11 +4,12 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "wasm": "wasm-pack build ../gameboy-wasm --target web",
-    "build": "tsc && vite build",
+    "dev": "concurrently \"rsw watch\" \"vite\"",
+    "wasm": "wasm-pack build ./gameboy-wasm --target web",
+    "build": "rsw build && tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "rsw": "rsw"
   },
   "dependencies": {
     "react": "^18.2.0",
@@ -25,6 +26,8 @@
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
     "typescript": "^5.2.2",
-    "vite": "^5.0.10"
+    "vite": "^5.0.10",
+    "vite-plugin-rsw": "^2.0.11",
+    "concurrently": "^8.2.2"
   }
 }

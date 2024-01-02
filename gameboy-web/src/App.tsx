@@ -1,5 +1,7 @@
 import {useEffect, useState} from "react";
-import init, {greet} from '../../gameboy-wasm/pkg'
+import init, {start_gameboy} from "gameboy-wasm";
+
+
 function App() {
   const [ready, setReady] = useState(false)
 
@@ -8,7 +10,7 @@ function App() {
   }, [])
 
   const handleButton = () => {
-    greet()
+    start_gameboy()
   }
 
   return (

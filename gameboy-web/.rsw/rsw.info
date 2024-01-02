@@ -1,0 +1,3 @@
+[RSW::OK]
+[RSW::NAME] :~> gameboy-wasm
+[RSW::PATH] :~> /mnt/datahub/projects/emulation/gameboy/gameboy-web/./gameboy-wasm/src/lib.rs

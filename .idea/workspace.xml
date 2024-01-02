@@ -7,30 +7,83 @@
     <cargoProject FILE="$PROJECT_DIR$/gameboy-wasm/Cargo.toml" />
     <cargoProject FILE="$PROJECT_DIR$/gameboy-lib/Cargo.toml" />
     <cargoProject FILE="$PROJECT_DIR$/gameboy-bin/Cargo.toml" />
+    <cargoProject FILE="$PROJECT_DIR$/gameboy-web/gameboy-wasm/Cargo.toml" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="032d3d31-861d-4a35-a844-ae511b635722" name="Changes" comment="Add wasm lib">
-      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/gameboy-frontend.iml" afterDir="false" />
+    <list default="true" id="032d3d31-861d-4a35-a844-ae511b635722" name="Changes" comment="Run wasm in vite">
+      <change afterPath="$PROJECT_DIR$/gameboy-lib/src/memory/mod.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gameboy-lib/src/memory/observer.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gameboy-web/.rsw/rsw.crates" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gameboy-web/.rsw/rsw.err" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gameboy-web/.rsw/rsw.info" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gameboy-web/gameboy-wasm/src/lib.rs" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gameboy-web/rsw.toml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/gameboy-web/vite.config.ts" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/gameboy.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/gameboy.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/modules.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gameboy-bin/src/main.rs" beforeDir="false" afterPath="$PROJECT_DIR$/gameboy-bin/src/main.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gameboy-frontend.iml" beforeDir="false" afterPath="$PROJECT_DIR$/gameboy-web.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gameboy-frontend/.eslintrc.cjs" beforeDir="false" afterPath="$PROJECT_DIR$/gameboy-web/.eslintrc.cjs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gameboy-frontend/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/gameboy-web/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gameboy-frontend/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/gameboy-web/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gameboy-frontend/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/gameboy-web/index.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gameboy-frontend/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/gameboy-web/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gameboy-frontend/public/vite.svg" beforeDir="false" afterPath="$PROJECT_DIR$/gameboy-web/public/vite.svg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gameboy-frontend/src/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/gameboy-web/src/App.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gameboy-frontend/src/main.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/gameboy-web/src/main.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gameboy-frontend/src/vite-env.d.ts" beforeDir="false" afterPath="$PROJECT_DIR$/gameboy-web/src/vite-env.d.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gameboy-frontend/tsconfig.json" beforeDir="false" afterPath="$PROJECT_DIR$/gameboy-web/tsconfig.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gameboy-frontend/tsconfig.node.json" beforeDir="false" afterPath="$PROJECT_DIR$/gameboy-web/tsconfig.node.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gameboy-frontend/vite.config.ts" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gameboy-frontend/yarn.lock" beforeDir="false" afterPath="$PROJECT_DIR$/gameboy-web/yarn.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gameboy-lib/Cargo.lock" beforeDir="false" afterPath="$PROJECT_DIR$/gameboy-lib/Cargo.lock" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gameboy-lib/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/gameboy-lib/Cargo.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gameboy-lib/src/cpu/cpu.rs" beforeDir="false" afterPath="$PROJECT_DIR$/gameboy-lib/src/cpu/cpu.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gameboy-lib/src/lib.rs" beforeDir="false" afterPath="$PROJECT_DIR$/gameboy-lib/src/lib.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gameboy-lib/src/memory.rs" beforeDir="false" afterPath="$PROJECT_DIR$/gameboy-lib/src/memory/memory.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gameboy-wasm/.appveyor.yml" beforeDir="false" afterPath="$PROJECT_DIR$/gameboy-web/gameboy-wasm/.appveyor.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gameboy-wasm/.github/dependabot.yml" beforeDir="false" afterPath="$PROJECT_DIR$/gameboy-web/gameboy-wasm/.github/dependabot.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gameboy-wasm/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/gameboy-web/gameboy-wasm/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gameboy-wasm/.travis.yml" beforeDir="false" afterPath="$PROJECT_DIR$/gameboy-web/gameboy-wasm/.travis.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gameboy-wasm/Cargo.toml" beforeDir="false" afterPath="$PROJECT_DIR$/gameboy-web/gameboy-wasm/Cargo.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gameboy-wasm/LICENSE_APACHE" beforeDir="false" afterPath="$PROJECT_DIR$/gameboy-web/gameboy-wasm/LICENSE_APACHE" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gameboy-wasm/LICENSE_MIT" beforeDir="false" afterPath="$PROJECT_DIR$/gameboy-web/gameboy-wasm/LICENSE_MIT" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gameboy-wasm/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/gameboy-web/gameboy-wasm/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gameboy-wasm/src/lib.rs" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/gameboy-wasm/src/utils.rs" beforeDir="false" afterPath="$PROJECT_DIR$/gameboy-web/gameboy-wasm/src/utils.rs" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/gameboy-wasm/tests/web.rs" beforeDir="false" afterPath="$PROJECT_DIR$/gameboy-web/gameboy-wasm/tests/web.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Rust File" />
+      </list>
+    </option>
+  </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="HighlightingSettingsPerFile">
+    <setting file="file://$PROJECT_DIR$/gameboy-lib/src/cpu/cpu.rs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/gameboy-lib/src/cpu/mod.rs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/gameboy-lib/src/cpu/registers/flag_register.rs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/gameboy-lib/src/cpu/registers/mod.rs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/gameboy-lib/src/memory/memory.rs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/gameboy-lib/src/memory/mod.rs" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/gameboy-lib/src/memory/observer.rs" root0="FORCE_HIGHLIGHTING" />
   </component>
   <component name="MacroExpansionManager">
     <option name="directoryName" value="eth11x0d" />
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 0
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 0
+}</component>
   <component name="ProjectId" id="2aHa8Pi3xKSGvB8YD7VPHeWeDwD" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
@@ -43,6 +96,7 @@
     "SHARE_PROJECT_CONFIGURATION_FILES": "true",
     "git-widget-placeholder": "main",
     "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "/mnt/datahub/projects/emulation/gameboy/gameboy-web/gameboy-wasm/Cargo.toml",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -51,27 +105,16 @@
     "nodejs_package_manager_path": "npm",
     "org.rust.cargo.project.model.PROJECT_DISCOVERY": "true",
     "settings.editor.selected.configurable": "preferences.pluginManager",
-    "ts.external.directory.path": "/mnt/datahub/projects/emulation/gameboy/gameboy-frontend/node_modules/typescript/lib",
+    "ts.external.directory.path": "/mnt/datahub/projects/emulation/gameboy/gameboy-web/node_modules/typescript/lib",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
-  <component name="RunManager">
-    <configuration default="true" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
-      <option name="command" value="run" />
-      <option name="emulateTerminal" value="true" />
-      <option name="channel" value="DEFAULT" />
-      <option name="requiredFeatures" value="true" />
-      <option name="allFeatures" value="false" />
-      <option name="withSudo" value="false" />
-      <option name="buildTarget" value="REMOTE" />
-      <option name="backtrace" value="SHORT" />
-      <envs />
-      <option name="isRedirectInput" value="false" />
-      <option name="redirectInputPath" value="" />
-      <method v="2">
-        <option name="CARGO.BUILD_TASK_PROVIDER" enabled="true" />
-      </method>
-    </configuration>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/gameboy-frontend" />
+      <recent name="$PROJECT_DIR$/gameboy-lib/src/memory" />
+      <recent name="$PROJECT_DIR$/gameboy-lib/src/observer" />
+    </key>
   </component>
   <component name="RustProjectSettings">
     <option name="toolchainHomeDirectory" value="/usr/bin" />
@@ -84,7 +127,9 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1703977798818</updated>
-      <workItem from="1703977799845" duration="3131000" />
+      <workItem from="1703977799845" duration="13549000" />
+      <workItem from="1704213094559" duration="3544000" />
+      <workItem from="1704217556615" duration="2594000" />
     </task>
     <task id="LOCAL-00001" summary="Add wasm lib">
       <option name="closed" value="true" />
@@ -94,7 +139,15 @@
       <option name="project" value="LOCAL" />
       <updated>1703977864757</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="Add vite project and import wasm">
+      <option name="closed" value="true" />
+      <created>1703981104184</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1703981104184</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -102,6 +155,8 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Add wasm lib" />
-    <option name="LAST_COMMIT_MESSAGE" value="Add wasm lib" />
+    <MESSAGE value="Add vite project and import wasm" />
+    <MESSAGE value="Run wasm in vite" />
+    <option name="LAST_COMMIT_MESSAGE" value="Run wasm in vite" />
   </component>
 </project>

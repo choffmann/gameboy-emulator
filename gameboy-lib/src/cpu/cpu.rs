@@ -1,6 +1,6 @@
 use crate::cpu::instructions::{JumpCondition, Target16Bit};
 use crate::cpu::registers::{Register8BitName, Registers};
-use crate::memory::Memory;
+use crate::memory::memory::Memory;
 
 use super::instructions::Target8Bit;
 use super::instructions::{Instruction, Source16Bit};
@@ -12,14 +12,20 @@ pub struct CPU {
     pub memory: Memory,
 }
 
-impl CPU {
-    pub fn boot(boot_rom: Vec<u8>) -> CPU {
-        println!("[CPU] Starting CPU...");
+impl Default for CPU {
+    fn default() -> Self {
         CPU {
             register: Registers::new(),
             pc: 0x0,
-            memory: Memory::new(boot_rom),
+            memory: Memory::default(),
         }
+    }
+}
+
+impl CPU {
+    pub fn boot(&mut self, boot_rom: Vec<u8>) {
+        println!("[CPU] Starting CPU...");
+        self.memory.boot(boot_rom);
     }
 
     pub fn execute(&mut self, instructions: Instruction) -> u16 {
