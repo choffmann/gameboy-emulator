@@ -1,5 +1,5 @@
 import {useEffect, useState} from "react";
-import init, {start_gameboy} from "gameboy-wasm";
+import init, {load_boot_rom, CPU} from "gameboy-wasm";
 
 
 function App() {
@@ -10,13 +10,16 @@ function App() {
   }, [])
 
   const handleButton = () => {
-    start_gameboy()
+    const cpu = new CPU();
+    const cpuAsJson = cpu.to_json();
+    const memory = cpuAsJson.memory;
+    console.log("Memory", memory)
   }
 
   return (
-    <button disabled={!ready} onClick={() => handleButton()}>
-      Hello World!
-    </button>
+      <button disabled={!ready} onClick={() => handleButton()}>
+        Run
+      </button>
   )
 }
 

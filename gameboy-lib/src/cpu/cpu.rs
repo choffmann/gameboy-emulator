@@ -1,11 +1,13 @@
+use serde_derive::Serialize;
 use crate::cpu::instructions::{JumpCondition, Target16Bit};
 use crate::cpu::registers::{Register8BitName, Registers};
-use crate::memory::memory::Memory;
+use crate::memory::Memory;
 
 use super::instructions::Target8Bit;
 use super::instructions::{Instruction, Source16Bit};
 use super::registers::Register16BitName;
 
+#[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct CPU {
     pub register: Registers,
     pub pc: u16,

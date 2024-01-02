@@ -1,6 +1,8 @@
+use serde_derive::Serialize;
 use super::Register;
 
 #[derive(Clone)]
+#[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct StackPointer {
     name: String,
     value: u16

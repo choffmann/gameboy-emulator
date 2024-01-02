@@ -1,4 +1,7 @@
+use serde_derive::Serialize;
+
 #[derive(Copy, Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct FlagRegister {
     pub zero: bool,
     pub subtract: bool,

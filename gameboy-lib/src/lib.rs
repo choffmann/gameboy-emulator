@@ -1,6 +1,4 @@
 use crate::cpu::cpu::CPU;
-use crate::cpu::registers::Registers;
-use crate::memory::memory::Memory;
 
 pub mod cpu;
 pub mod memory;

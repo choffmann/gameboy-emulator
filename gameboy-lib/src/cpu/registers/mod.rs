@@ -1,3 +1,4 @@
+use serde_derive::Serialize;
 use super::registers::flag_register::FlagRegister;
 use super::registers::register::Register;
 use super::registers::register_8bit::Register8Bit;
@@ -9,6 +10,7 @@ mod register_8bit;
 mod stack_pointer;
 
 #[derive(Clone)]
+#[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct Registers {
     a: Register8Bit,
     b: Register8Bit,

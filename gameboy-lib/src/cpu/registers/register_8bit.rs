@@ -1,6 +1,8 @@
+use serde_derive::Serialize;
 use super::register::Register;
 
 #[derive(Clone)]
+#[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct Register8Bit {
     name: String,
     value: u8,
