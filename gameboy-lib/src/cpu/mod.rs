@@ -1,9 +1,9 @@
-use crate::memory::Memory;
+use crate::{cpu::instructions::Instruction, memory::Memory};
 
 use self::registers::Register;
 
-pub mod registers;
 pub mod instructions;
+pub mod registers;
 
 pub struct Cpu {
     pub registers: registers::Registers,
@@ -34,206 +34,357 @@ impl Cpu {
             opcode
         };
 
-        if instruction != 0 {
-            println!("[CPU] Next instruction 0x{:x}", instruction);
+        println!("[CPU] Next instruction 0x{:x}", instruction);
+
+        let next_pc = match Instruction::from_byte(instruction, prefixed) {
+            Some(instruction) => self.execute(instruction, prefixed),
+            None => panic!("[CPU] Invalid instruction 0x{:x}", instruction),
+        };
+
+        self.pc = next_pc;
+    }
+
+    fn execute(&mut self, instruction: Instruction, prefixed: bool) -> u16 {
+        match instruction {
+            Instruction::Nop => self.pc.wrapping_add(1),
+            Instruction::Ld8(_, _) => self.load_8(instruction),
+            _ => panic!("[CPU] Not implementet {:?}", instruction),
         }
     }
 
-    fn load(&mut self, register: Register, value: u8) {
-        self.registers.set(register, value);
-    }
+    fn load_8(&mut self, instruction: Instruction) -> u16 {
+        match instruction {
+            Instruction::Ld8(to, from) => match (&to, &from) {
+                (Register::BC | Register::DE | Register::HL | Register::AF, Register::D8) => {
+                    let value = self.memory.read(self.pc + 1);
+                    let address = self.registers.get_16(to);
+                    self.memory.write(address, value);
 
-    fn load_register(&mut self, from: Register, to: Register) {
-        let value = self.registers.get(from);
-        self.load(to, value);
-    }
+                    self.pc.wrapping_add(2)
+                }
+                (Register::BC | Register::DE | Register::HL | Register::AF, from) => {
+                    let value = self.registers.get(from);
+                    let address = self.registers.get_16(to);
+                    self.memory.write(address, value);
 
-    fn add(&mut self, value: u8) {
-        let a = self.registers.a;
-        let result = a.wrapping_add(value);
-        self.registers.f.zero = result == 0;
-        self.registers.f.subtract = false;
-        self.registers.f.half_carry = (a & 0x0F) + (value & 0x0F) > 0x0F;
-        self.registers.f.carry = (a as u16) + (value as u16) > 0xFF;
-        self.registers.a = result;
-    }
+                    self.pc.wrapping_add(1)
+                }
+                (Register::D16, from) => {
+                    let value = self.registers.get(from);
+                    let address = self.memory.read_16(self.pc + 1);
+                    self.memory.write(address, value);
 
-    fn add_carried(&mut self, value: u8) {
-        let a = self.registers.a;
-        let carry = if self.registers.f.carry { 1 } else { 0 };
-        let result = a.wrapping_add(value).wrapping_add(carry);
-        self.registers.f.zero = result == 0;
-        self.registers.f.subtract = false;
-        self.registers.f.half_carry = (a & 0x0F) + (value & 0x0F) + carry > 0x0F;
-        self.registers.f.carry = (a as u16) + (value as u16) + (carry as u16) > 0xFF;
-        self.registers.a = result;
+                    self.pc.wrapping_add(3)
+                }
+                (to, Register::HL | Register::BC | Register::DE | Register::AF) => {
+                    let address = self.registers.get_16(from);
+                    let value = self.memory.read(address);
+                    self.registers.set(to, value);
+
+                    self.pc.wrapping_add(1)
+                }
+                (to, Register::D8) => {
+                    let value = self.memory.read(self.pc + 1);
+                    self.registers.set(to, value);
+
+                    self.pc.wrapping_add(2)
+                }
+                (to, Register::D16) => {
+                    let address = self.memory.read_16(self.pc + 1);
+                    let value = self.memory.read(address);
+                    self.registers.set(to, value);
+
+                    self.pc.wrapping_add(3)
+                }
+                (to, from) => {
+                    let value = self.registers.get(from);
+                    self.registers.set(to, value);
+
+                    self.pc.wrapping_add(1)
+                }
+            },
+            _ => panic!("[CPU] Invalid instruction {:?}", instruction),
+        }
     }
 }
-
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn test_load_a() {
+    fn boot() {
         let mut cpu = Cpu::new();
-        cpu.load(Register::A, 0x01);
-        assert_eq!(cpu.registers.a, 0x01);
+        cpu.boot(vec![0x00, 0x01, 0x02, 0x03]);
+        assert_eq!(cpu.pc, 0x100);
+        assert_eq!(cpu.memory.read(0x100), 0x00);
+        assert_eq!(cpu.memory.read(0x101), 0x01);
+        assert_eq!(cpu.memory.read(0x102), 0x02);
+        assert_eq!(cpu.memory.read(0x103), 0x03);
     }
 
     #[test]
-    fn test_load_b() {
+    fn step() {
         let mut cpu = Cpu::new();
-        cpu.load(Register::B, 0x01);
-        assert_eq!(cpu.registers.b, 0x01);
+        cpu.boot(vec![0x00, 0x00, 0x00, 0x00]);
+        cpu.step();
+        assert_eq!(cpu.pc, 0x101);
+        cpu.step();
+        assert_eq!(cpu.pc, 0x102);
+        cpu.step();
+        assert_eq!(cpu.pc, 0x103);
+        cpu.step();
+        assert_eq!(cpu.pc, 0x104);
     }
 
     #[test]
-    fn test_load_c() {
+    fn execute_nop() {
         let mut cpu = Cpu::new();
-        cpu.load(Register::C, 0x01);
-        assert_eq!(cpu.registers.c, 0x01);
+        let pc = cpu.pc;
+        let next_pc = cpu.execute(Instruction::Nop, false);
+        assert_eq!(next_pc, pc + 1);
     }
 
     #[test]
-    fn test_load_d() {
+    fn execute_ld8_immediate() {
         let mut cpu = Cpu::new();
-        cpu.load(Register::D, 0x01);
-        assert_eq!(cpu.registers.d, 0x01);
+        cpu.boot(vec![
+            0x3E, 0x42, 0x06, 0x69, 0x0e, 0x42, 0x16, 0x69, 0x1e, 0x42, 0x26, 0x69, 0x2e, 0x42,
+        ]);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0x42);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::B), 0x69);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::C), 0x42);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::D), 0x69);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::E), 0x42);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::H), 0x69);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::L), 0x42);
     }
 
     #[test]
-    fn test_load_e() {
+    fn execute_ld8_to_hl_from_reg() {
         let mut cpu = Cpu::new();
-        cpu.load(Register::E, 0x01);
-        assert_eq!(cpu.registers.e, 0x01);
+        cpu.registers.set_16(&Register::HL, 0x5123);
+
+        cpu.registers.set(&Register::B, 0x43);
+        cpu.registers.set(&Register::C, 0x44);
+        cpu.registers.set(&Register::D, 0x45);
+        cpu.registers.set(&Register::E, 0x46);
+
+        cpu.boot(vec![0x36, 0x42, 0x70, 0x71, 0x72, 0x73, 0x74, 0x75]);
+        cpu.step();
+
+        // Load 0x42 into memory at 0x5123
+        assert_eq!(cpu.memory.read(0x5123), 0x42);
+        cpu.step();
+
+        // Load B 0x43 into memory at 0x5123
+        assert_eq!(cpu.memory.read(0x5123), 0x43);
+        cpu.step();
+
+        // Load C 0x44 into memory at 0x5123
+        assert_eq!(cpu.memory.read(0x5123), 0x44);
+        cpu.step();
+
+        // Load D 0x45 into memory at 0x5123
+        assert_eq!(cpu.memory.read(0x5123), 0x45);
+        cpu.step();
+
+        // Load E 0x46 into memory at 0x5123
+        assert_eq!(cpu.memory.read(0x5123), 0x46);
+        cpu.step();
+
+        // Load H 0x51 into memory at 0x5123
+        assert_eq!(cpu.memory.read(0x5123), 0x51);
+        cpu.step();
+
+        // Load L 0x23 into memory at 0x5123
+        assert_eq!(cpu.memory.read(0x5123), 0x23);
     }
 
     #[test]
-    fn test_load_h() {
+    fn execute_ld8_to_reg_from_hl() {
         let mut cpu = Cpu::new();
-        cpu.load(Register::H, 0x01);
-        assert_eq!(cpu.registers.h, 0x01);
+        cpu.registers.set_16(&Register::HL, 0x5123);
+
+        cpu.memory.write(0x5123, 0x42);
+        cpu.memory.write(0x4223, 0x42);
+        cpu.memory.write(0x4242, 0x42);
+
+        cpu.boot(vec![0x46, 0x4E, 0x56, 0x5E, 0x66, 0x6E, 0x7E]);
+        assert_eq!(cpu.registers.get(&Register::B), 0x00);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::B), 0x42);
+
+        assert_eq!(cpu.registers.get(&Register::C), 0x00);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::C), 0x42);
+
+        assert_eq!(cpu.registers.get(&Register::D), 0x00);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::D), 0x42);
+
+        assert_eq!(cpu.registers.get(&Register::E), 0x00);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::E), 0x42);
+
+        assert_eq!(cpu.registers.get(&Register::H), 0x51);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::H), 0x42);
+
+        assert_eq!(cpu.registers.get(&Register::L), 0x23);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::L), 0x42);
+
+        assert_eq!(cpu.registers.get(&Register::A), 0x00);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0x42);
     }
 
     #[test]
-    fn test_load_l() {
+    fn execute_ld8_to_a_from_reg() {
         let mut cpu = Cpu::new();
-        cpu.load(Register::L, 0x01);
-        assert_eq!(cpu.registers.l, 0x01);
+        cpu.registers.set(&Register::A, 0x00);
+        cpu.registers.set(&Register::B, 0xAA);
+        cpu.registers.set(&Register::C, 0xBB);
+        cpu.registers.set(&Register::D, 0x03);
+        cpu.registers.set(&Register::E, 0x04);
+        cpu.registers.set(&Register::H, 0x05);
+        cpu.registers.set(&Register::L, 0x06);
+
+        cpu.memory.write(0x0506, 0x69); // [HL]
+        cpu.memory.write(0xAABB, 0x69); // [BC]
+        cpu.memory.write(0x0304, 0x69); // [DE]
+        cpu.memory.write(0xABCD, 0x69); // [nn]
+
+        cpu.boot(vec![
+            0x7F, 0x78, 0x79, 0x7A, 0x7B, 0x7C, 0x7D, 0x7E, 0x0A, 0x1A, 0xFA, 0xCD, 0xAB, 0x3E,
+            0x42,
+        ]);
+        cpu.step();
+
+        // Load 0x00 into A LD A, A
+        assert_eq!(cpu.registers.get(&Register::A), 0x00);
+        cpu.step();
+
+        // Load 0xAA into A LD A, B
+        assert_eq!(cpu.registers.get(&Register::A), 0xAA);
+        cpu.step();
+
+        // Load 0xBB into A LD A, C
+        assert_eq!(cpu.registers.get(&Register::A), 0xBB);
+        cpu.step();
+
+        // Load 0x03 into A LD A, D
+        assert_eq!(cpu.registers.get(&Register::A), 0x03);
+        cpu.step();
+
+        // Load 0x04 into A LD A, E
+        assert_eq!(cpu.registers.get(&Register::A), 0x04);
+        cpu.step();
+
+        // Load 0x05 into A LD A, H
+        assert_eq!(cpu.registers.get(&Register::A), 0x05);
+        cpu.step();
+
+        // Load 0x06 into A LD A, L
+        assert_eq!(cpu.registers.get(&Register::A), 0x06);
+        cpu.step();
+
+        // Load 0x69 into A LD A, (HL)
+        assert_eq!(cpu.registers.get(&Register::A), 0x69);
+        cpu.step();
+
+        // Load 0x69 into A LD A, (BC)
+        assert_eq!(cpu.registers.get(&Register::A), 0x69);
+        cpu.step();
+
+        // Load 0x69 into A LD A, (DE)
+        assert_eq!(cpu.registers.get(&Register::A), 0x69);
+        cpu.step();
+
+        // Load 0x69 into A LD A, (nn)
+        assert_eq!(cpu.registers.get(&Register::A), 0x69);
+        cpu.step();
+
+        // Load 0x42 into A LD A, 0x42
+        assert_eq!(cpu.registers.get(&Register::A), 0x42);
     }
 
     #[test]
-    fn test_add() {
+    fn execute_ld8_to_reg_from_a() {
         let mut cpu = Cpu::new();
-        cpu.registers.a = 0x10;
-        cpu.add(0x01);
-        assert_eq!(cpu.registers.a, 0x11);
-        assert_eq!(cpu.registers.f.zero, false);
-        assert_eq!(cpu.registers.f.subtract, false);
-        assert_eq!(cpu.registers.f.half_carry, false);
-        assert_eq!(cpu.registers.f.carry, false);
-    }
+        cpu.registers.set(&Register::A, 0x42);
+        cpu.registers.set(&Register::B, 0x00);
+        cpu.registers.set(&Register::C, 0x00);
+        cpu.registers.set(&Register::D, 0x00);
+        cpu.registers.set(&Register::E, 0x00);
+        cpu.registers.set(&Register::H, 0x00);
+        cpu.registers.set(&Register::L, 0x00);
 
-    #[test]
-    fn test_add_zero() {
-        let mut cpu = Cpu::new();
-        cpu.registers.a = 0xFF;
-        cpu.add(0x01);
-        assert_eq!(cpu.registers.a, 0x00);
-        assert_eq!(cpu.registers.f.zero, true);
-        assert_eq!(cpu.registers.f.subtract, false);
-        assert_eq!(cpu.registers.f.half_carry, true);
-        assert_eq!(cpu.registers.f.carry, true);
-    }
+        cpu.boot(vec![
+            0x47, 0x4f, 0x57, 0x5f, 0x67, 0x6f, 0x7f, 0x02, 0x12, 0x77, 0xEA, 0xCD, 0xAB,
+        ]);
 
-    #[test]
-    fn test_add_half_carry() {
-        let mut cpu = Cpu::new();
-        cpu.registers.a = 0x0F;
-        cpu.add(0x01);
-        assert_eq!(cpu.registers.a, 0x10);
-        assert_eq!(cpu.registers.f.zero, false);
-        assert_eq!(cpu.registers.f.subtract, false);
-        assert_eq!(cpu.registers.f.half_carry, true);
-        assert_eq!(cpu.registers.f.carry, false);
-    }
+        // Load A 0x42 into B LD B, A
+        cpu.registers.set(&Register::A, 0x42);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::B), 0x42);
 
-    #[test]
-    fn test_add_carry() {
-        let mut cpu = Cpu::new();
-        cpu.registers.a = 0xFF;
-        cpu.add(0x01);
-        assert_eq!(cpu.registers.a, 0x00);
-        assert_eq!(cpu.registers.f.zero, true);
-        assert_eq!(cpu.registers.f.subtract, false);
-        assert_eq!(cpu.registers.f.half_carry, true);
-        assert_eq!(cpu.registers.f.carry, true);
-    }
+        // Load A 0x43 into C LD C, A
+        cpu.registers.set(&Register::A, 0x43);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::C), 0x43);
 
-    #[test]
-    fn test_add_carried() {
-        let mut cpu = Cpu::new();
-        cpu.registers.a = 0x10;
-        cpu.registers.f.carry = true;
-        cpu.add_carried(0x01);
-        assert_eq!(cpu.registers.a, 0x12);
-        assert_eq!(cpu.registers.f.zero, false);
-        assert_eq!(cpu.registers.f.subtract, false);
-        assert_eq!(cpu.registers.f.half_carry, false);
-        assert_eq!(cpu.registers.f.carry, false);
-    }
+        // Load A 0x44 into D LD D, A
+        cpu.registers.set(&Register::A, 0x44);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::D), 0x44);
 
-    #[test]
-    fn test_add_carried_zero() {
-        let mut cpu = Cpu::new();
-        cpu.registers.a = 0xFF;
-        cpu.registers.f.carry = true;
-        cpu.add_carried(0x01);
-        assert_eq!(cpu.registers.a, 0x01);
-        assert_eq!(cpu.registers.f.zero, false);
-        assert_eq!(cpu.registers.f.subtract, false);
-        assert_eq!(cpu.registers.f.half_carry, true);
-        assert_eq!(cpu.registers.f.carry, true);
-    }
+        // Load A 0x45 into E LD E, A
+        cpu.registers.set(&Register::A, 0x45);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::E), 0x45);
 
-    #[test]
-    fn test_add_carried_half_carry() {
-        let mut cpu = Cpu::new();
-        cpu.registers.a = 0x0F;
-        cpu.registers.f.carry = true;
-        cpu.add_carried(0x01);
-        assert_eq!(cpu.registers.a, 0x11);
-        assert_eq!(cpu.registers.f.zero, false);
-        assert_eq!(cpu.registers.f.subtract, false);
-        assert_eq!(cpu.registers.f.half_carry, true);
-        assert_eq!(cpu.registers.f.carry, false);
-    }
+        // Load A 0x46 into H LD H, A
+        cpu.registers.set(&Register::A, 0x46);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::H), 0x46);
 
-    #[test]
-    fn test_add_carried_carry() {
-        let mut cpu = Cpu::new();
-        cpu.registers.a = 0xFF;
-        cpu.registers.f.carry = true;
-        cpu.add_carried(0x01);
-        assert_eq!(cpu.registers.a, 0x01);
-        assert_eq!(cpu.registers.f.zero, false);
-        assert_eq!(cpu.registers.f.subtract, false);
-        assert_eq!(cpu.registers.f.half_carry, true);
-        assert_eq!(cpu.registers.f.carry, true);
-    }
+        // Load A 0x47 into L LD L, A
+        cpu.registers.set(&Register::A, 0x47);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::L), 0x47);
 
-    #[test]
-    fn test_add_carried_carry_carry() {
-        let mut cpu = Cpu::new();
-        cpu.registers.a = 0xFF;
-        cpu.registers.f.carry = true;
-        cpu.add_carried(0xFF);
-        assert_eq!(cpu.registers.a, 0xFF);
-        assert_eq!(cpu.registers.f.zero, false);
-        assert_eq!(cpu.registers.f.subtract, false);
-        assert_eq!(cpu.registers.f.half_carry, true);
-        assert_eq!(cpu.registers.f.carry, true);
+        // Load A 0x48 into A LD A, A
+        cpu.registers.set(&Register::A, 0x48);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0x48);
+
+        // Load A 0x49 into (BC) LD (BC), A
+        cpu.registers.set(&Register::A, 0x49);
+        cpu.step();
+        assert_eq!(cpu.memory.read(0x4243), 0x49);
+
+        // Load A 0x4A into (DE) LD (DE), A
+        cpu.registers.set(&Register::A, 0x4A);
+        cpu.step();
+        assert_eq!(cpu.memory.read(0x4445), 0x4A);
+
+        // Load A 0x48 into (HL) LD (HL), A
+        cpu.registers.set(&Register::A, 0x48);
+        cpu.step();
+        assert_eq!(cpu.memory.read(0x4647), 0x48);
+
+        // Load A 0x4B into (nn) LD (nn), A
+        cpu.registers.set(&Register::A, 0x4B);
+        cpu.step();
+        assert_eq!(cpu.memory.read(0xABCD), 0x4B);
     }
 }

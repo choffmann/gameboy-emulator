@@ -3,6 +3,7 @@ use self::{flag_register::FlagRegister, stack_pointer::StackPointer};
 pub(crate) mod flag_register;
 pub(crate) mod stack_pointer;
 
+#[derive(Debug)]
 pub enum Register {
     A,
     B,
@@ -17,6 +18,8 @@ pub enum Register {
     DE,
     HL,
     SP,
+    D8,
+    D16,
 }
 
 pub struct Registers {
@@ -46,7 +49,7 @@ impl Registers {
         }
     }
 
-    pub fn get(&self, register: Register) -> u8 {
+    pub fn get(&self, register: &Register) -> u8 {
         match register {
             Register::A => self.a,
             Register::B => self.b,
@@ -71,7 +74,8 @@ impl Registers {
         }
     }
 
-    pub fn set(&mut self, register: Register, value: u8) {
+    pub fn set(&mut self, register: &Register, value: u8) {
+        println!("[REG] Setting 8-bit register {:?} to 0x{:X}", register, value);
         match register {
             Register::A => self.a = value,
             Register::B => self.b = value,
@@ -88,7 +92,8 @@ impl Registers {
         }
     }
 
-    pub fn set_16(&mut self, register: Register, value: u16) {
+    pub fn set_16(&mut self, register: &Register, value: u16) {
+        println!("[REG] Setting 16-bit register {:?} to 0x{:X}", register, value);
         match register {
             Register::AF => self.set_af(value),
             Register::BC => self.set_bc(value),
@@ -152,14 +157,14 @@ mod tests {
         registers.h = 7;
         registers.l = 8;
 
-        assert_eq!(registers.get(Register::A), 1);
-        assert_eq!(registers.get(Register::B), 2);
-        assert_eq!(registers.get(Register::C), 3);
-        assert_eq!(registers.get(Register::D), 4);
-        assert_eq!(registers.get(Register::E), 5);
-        assert_eq!(registers.get(Register::F), 6);
-        assert_eq!(registers.get(Register::H), 7);
-        assert_eq!(registers.get(Register::L), 8);
+        assert_eq!(registers.get(&Register::A), 1);
+        assert_eq!(registers.get(&Register::B), 2);
+        assert_eq!(registers.get(&Register::C), 3);
+        assert_eq!(registers.get(&Register::D), 4);
+        assert_eq!(registers.get(&Register::E), 5);
+        assert_eq!(registers.get(&Register::F), 6);
+        assert_eq!(registers.get(&Register::H), 7);
+        assert_eq!(registers.get(&Register::L), 8);
     }
 
     #[test]
@@ -181,14 +186,14 @@ mod tests {
     #[test]
     fn set() {
         let mut registers = Registers::new();
-        registers.set(Register::A, 1);
-        registers.set(Register::B, 2);
-        registers.set(Register::C, 3);
-        registers.set(Register::D, 4);
-        registers.set(Register::E, 5);
-        registers.set(Register::F, 6);
-        registers.set(Register::H, 7);
-        registers.set(Register::L, 8);
+        registers.set(&Register::A, 1);
+        registers.set(&Register::B, 2);
+        registers.set(&Register::C, 3);
+        registers.set(&Register::D, 4);
+        registers.set(&Register::E, 5);
+        registers.set(&Register::F, 6);
+        registers.set(&Register::H, 7);
+        registers.set(&Register::L, 8);
 
         assert_eq!(registers.a, 1);
         assert_eq!(registers.b, 2);
@@ -203,11 +208,11 @@ mod tests {
     #[test]
     fn set_16() {
         let mut registers = Registers::new();
-        registers.set_16(Register::AF, 0x0102);
-        registers.set_16(Register::BC, 0x0304);
-        registers.set_16(Register::DE, 0x0506);
-        registers.set_16(Register::HL, 0x0708);
-        registers.set_16(Register::SP, 0x090A);
+        registers.set_16(&Register::AF, 0x0102);
+        registers.set_16(&Register::BC, 0x0304);
+        registers.set_16(&Register::DE, 0x0506);
+        registers.set_16(&Register::HL, 0x0708);
+        registers.set_16(&Register::SP, 0x090A);
 
         assert_eq!(registers.get_af(), 0x0102);
         assert_eq!(registers.get_bc(), 0x0304);
