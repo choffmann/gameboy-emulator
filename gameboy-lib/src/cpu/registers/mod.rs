@@ -1,29 +1,9 @@
-use serde_derive::Serialize;
-use super::registers::flag_register::FlagRegister;
-use super::registers::register::Register;
-use super::registers::register_8bit::Register8Bit;
-use super::registers::stack_pointer::StackPointer;
+use self::{flag_register::FlagRegister, stack_pointer::StackPointer};
 
 pub(crate) mod flag_register;
-mod register;
-mod register_8bit;
-mod stack_pointer;
+pub(crate) mod stack_pointer;
 
-#[derive(Clone)]
-#[cfg_attr(feature = "serialize", derive(Serialize))]
-pub struct Registers {
-    a: Register8Bit,
-    b: Register8Bit,
-    c: Register8Bit,
-    d: Register8Bit,
-    e: Register8Bit,
-    pub f: FlagRegister,
-    h: Register8Bit,
-    l: Register8Bit,
-    sp: StackPointer,
-}
-
-pub enum Register8BitName {
+pub enum Register {
     A,
     B,
     C,
@@ -32,9 +12,6 @@ pub enum Register8BitName {
     F,
     H,
     L,
-}
-
-pub enum Register16BitName {
     AF,
     BC,
     DE,
@@ -42,120 +19,200 @@ pub enum Register16BitName {
     SP,
 }
 
+pub struct Registers {
+    pub a: u8,
+    pub b: u8,
+    pub c: u8,
+    pub d: u8,
+    pub e: u8,
+    pub f: FlagRegister,
+    pub h: u8,
+    pub l: u8,
+    pub sp: StackPointer,
+}
+
 impl Registers {
     pub fn new() -> Registers {
         Registers {
-            a: Register8Bit::new("A"),
-            b: Register8Bit::new("B"),
-            c: Register8Bit::new("C"),
-            d: Register8Bit::new("D"),
-            e: Register8Bit::new("E"),
+            a: 0,
+            b: 0,
+            c: 0,
+            d: 0,
+            e: 0,
             f: FlagRegister::new(),
-            h: Register8Bit::new("H"),
-            l: Register8Bit::new("L"),
-            sp: StackPointer::new("SP"),
+            h: 0,
+            l: 0,
+            sp: StackPointer::new(),
         }
     }
 
-    pub fn get_8bit(&self, register: &Register8BitName) -> u8 {
+    pub fn get(&self, register: Register) -> u8 {
         match register {
-            Register8BitName::A => self.a.get(),
-            Register8BitName::B => self.b.get(),
-            Register8BitName::C => self.c.get(),
-            Register8BitName::D => self.d.get(),
-            Register8BitName::E => self.e.get(),
-            Register8BitName::F => self.f.into(),
-            Register8BitName::H => self.h.get(),
-            Register8BitName::L => self.l.get(),
+            Register::A => self.a,
+            Register::B => self.b,
+            Register::C => self.c,
+            Register::D => self.d,
+            Register::E => self.e,
+            Register::F => self.f.get(),
+            Register::H => self.h,
+            Register::L => self.l,
+            _ => panic!("Invalid register"),
         }
     }
 
-    pub fn get_16bit(&self, registers: &Register16BitName) -> u16 {
-        match registers {
-            Register16BitName::AF => self.get_af(),
-            Register16BitName::BC => self.get_bc(),
-            Register16BitName::DE => self.get_de(),
-            Register16BitName::HL => self.get_hl(),
-            Register16BitName::SP => self.sp.get(),
-        }
-    }
-
-    pub fn set_8bit(&mut self, register: &Register8BitName, value: u8) {
+    pub fn get_16(&self, register: Register) -> u16 {
         match register {
-            Register8BitName::A => self.a.set(value),
-            Register8BitName::B => self.b.set(value),
-            Register8BitName::C => self.c.set(value),
-            Register8BitName::D => self.d.set(value),
-            Register8BitName::E => self.e.set(value),
-            Register8BitName::F => self.f = value.into(),
-            Register8BitName::H => self.h.set(value),
-            Register8BitName::L => self.l.set(value),
+            Register::AF => self.get_af(),
+            Register::BC => self.get_bc(),
+            Register::DE => self.get_de(),
+            Register::HL => self.get_hl(),
+            Register::SP => self.sp.get(),
+            _ => panic!("Invalid register"),
         }
     }
 
-    pub fn set_16bit(&mut self, register: &Register16BitName, value: u16) {
+    pub fn set(&mut self, register: Register, value: u8) {
         match register {
-            Register16BitName::AF => self.set_af(value),
-            Register16BitName::BC => self.set_bc(value),
-            Register16BitName::DE => self.set_de(value),
-            Register16BitName::HL => self.set_hl(value),
-            Register16BitName::SP => self.sp.set(value),
+            Register::A => self.a = value,
+            Register::B => self.b = value,
+            Register::C => self.c = value,
+            Register::D => self.d = value,
+            Register::E => self.e = value,
+            Register::F => self.f.set(value),
+            Register::H => self.h = value,
+            Register::L => self.l = value,
+            Register::BC => self.set_bc((self.b as u16) << 8 | value as u16),
+            Register::DE => self.set_de((self.d as u16) << 8 | value as u16),
+            Register::HL => self.set_hl((self.h as u16) << 8 | value as u16),
+            _ => panic!("Invalid register"),
         }
     }
 
-    pub fn write_a(&mut self, value: u8) {
-        self.a.set(value);
-    }
-
-    pub fn read_a(&self) -> u8 {
-        return self.a.get();
+    pub fn set_16(&mut self, register: Register, value: u16) {
+        match register {
+            Register::AF => self.set_af(value),
+            Register::BC => self.set_bc(value),
+            Register::DE => self.set_de(value),
+            Register::HL => self.set_hl(value),
+            Register::SP => self.sp.set(value),
+            _ => panic!("Invalid register"),
+        }
     }
 
     fn get_af(&self) -> u16 {
-        let value = (self.a.get() as u16) << 8 | u8::from(self.f) as u16;
-        println!("[REG AF] Reading value: 0x{:x}", value);
-        return value;
+        (self.a as u16) << 8 | self.f.get() as u16
     }
 
     fn set_af(&mut self, value: u16) {
-        println!("[REG AF] Writing value: 0x{:x}", value);
-        self.a.set(((value & 0xff00) >> 8) as u8);
-        self.f = FlagRegister::from((value & 0xff) as u8);
+        self.a = (value >> 8) as u8;
+        self.f.set(value as u8);
     }
 
     fn get_bc(&self) -> u16 {
-        let value = (self.b.get() as u16) << 8 | self.c.get() as u16;
-        println!("[REG BC] Reading value: 0x{:x}", value);
-        return value;
+        (self.b as u16) << 8 | self.c as u16
     }
 
     fn set_bc(&mut self, value: u16) {
-        println!("[REG BC] Writing value: 0x{:x}", value);
-        self.b.set(((value & 0xff00) >> 8) as u8);
-        self.c.set((value & 0xff) as u8);
+        self.b = (value >> 8) as u8;
+        self.c = value as u8;
     }
 
     fn get_de(&self) -> u16 {
-        let value = (self.d.get() as u16) << 8 | self.e.get() as u16;
-        println!("[REG DE] Reading value: 0x{:x}", value);
-        return value;
+        (self.d as u16) << 8 | self.e as u16
     }
 
     fn set_de(&mut self, value: u16) {
-        println!("[REG DE] Writing value: 0x{:x}", value);
-        self.d.set(((value & 0xff00) >> 8) as u8);
-        self.e.set((value & 0xff) as u8);
+        self.d = (value >> 8) as u8;
+        self.e = value as u8;
     }
 
     fn get_hl(&self) -> u16 {
-        let value = (self.h.get() as u16) << 8 | self.l.get() as u16;
-        println!("[REG HL] Reading value: 0x{:x}", value);
-        return value;
+        (self.h as u16) << 8 | self.l as u16
     }
 
     fn set_hl(&mut self, value: u16) {
-        println!("[REG HL] Writing value: 0x{:x}", value);
-        self.h.set(((value & 0xff00) >> 8) as u8);
-        self.l.set((value & 0xff) as u8);
+        self.h = (value >> 8) as u8;
+        self.l = value as u8;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn get() {
+        let mut registers = Registers::new();
+        registers.a = 1;
+        registers.b = 2;
+        registers.c = 3;
+        registers.d = 4;
+        registers.e = 5;
+        registers.f.set(6);
+        registers.h = 7;
+        registers.l = 8;
+
+        assert_eq!(registers.get(Register::A), 1);
+        assert_eq!(registers.get(Register::B), 2);
+        assert_eq!(registers.get(Register::C), 3);
+        assert_eq!(registers.get(Register::D), 4);
+        assert_eq!(registers.get(Register::E), 5);
+        assert_eq!(registers.get(Register::F), 6);
+        assert_eq!(registers.get(Register::H), 7);
+        assert_eq!(registers.get(Register::L), 8);
+    }
+
+    #[test]
+    fn get_16() {
+        let mut registers = Registers::new();
+        registers.set_af(0x0102);
+        registers.set_bc(0x0304);
+        registers.set_de(0x0506);
+        registers.set_hl(0x0708);
+        registers.sp.set(0x090A);
+
+        assert_eq!(registers.get_16(Register::AF), 0x0102);
+        assert_eq!(registers.get_16(Register::BC), 0x0304);
+        assert_eq!(registers.get_16(Register::DE), 0x0506);
+        assert_eq!(registers.get_16(Register::HL), 0x0708);
+        assert_eq!(registers.get_16(Register::SP), 0x090A);
+    }
+
+    #[test]
+    fn set() {
+        let mut registers = Registers::new();
+        registers.set(Register::A, 1);
+        registers.set(Register::B, 2);
+        registers.set(Register::C, 3);
+        registers.set(Register::D, 4);
+        registers.set(Register::E, 5);
+        registers.set(Register::F, 6);
+        registers.set(Register::H, 7);
+        registers.set(Register::L, 8);
+
+        assert_eq!(registers.a, 1);
+        assert_eq!(registers.b, 2);
+        assert_eq!(registers.c, 3);
+        assert_eq!(registers.d, 4);
+        assert_eq!(registers.e, 5);
+        assert_eq!(registers.f.get(), 6);
+        assert_eq!(registers.h, 7);
+        assert_eq!(registers.l, 8);
+    }
+
+    #[test]
+    fn set_16() {
+        let mut registers = Registers::new();
+        registers.set_16(Register::AF, 0x0102);
+        registers.set_16(Register::BC, 0x0304);
+        registers.set_16(Register::DE, 0x0506);
+        registers.set_16(Register::HL, 0x0708);
+        registers.set_16(Register::SP, 0x090A);
+
+        assert_eq!(registers.get_af(), 0x0102);
+        assert_eq!(registers.get_bc(), 0x0304);
+        assert_eq!(registers.get_de(), 0x0506);
+        assert_eq!(registers.get_hl(), 0x0708);
+        assert_eq!(registers.sp.get(), 0x090A);
     }
 }

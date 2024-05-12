@@ -1,26 +1,26 @@
-use crate::cpu::cpu::CPU;
-
 pub mod cpu;
 pub mod memory;
 
-pub struct GameBoy {
-    pub cpu: CPU,
+pub struct Gameboy {
+    cpu: cpu::Cpu,
     boot_rom: Vec<u8>,
-    //game_rom: Vec<u8>
 }
 
-impl GameBoy {
-    pub fn new() -> Self {
-        GameBoy {
-            cpu: CPU::default(),
-            boot_rom: Vec::new(),
+impl Gameboy {
+    pub fn new(boot_rom: Vec<u8>) -> Gameboy {
+        Gameboy {
+            cpu: cpu::Cpu::new(),
+            boot_rom,
         }
     }
 
-    pub fn start_gameboy(&mut self, boot_rom: Vec<u8>) {
-        self.cpu.boot(boot_rom);
-        loop {
-            self.cpu.step();
-        }
+    pub fn start(&mut self) {
+        println!("Starting Gameboy");
+        self.cpu.boot(self.boot_rom.clone());
     }
+}
+
+#[cfg(test)]
+mod tests {
+
 }

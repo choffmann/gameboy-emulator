@@ -1,32 +1,39 @@
-use serde_derive::Serialize;
-use super::Register;
 
-#[derive(Clone)]
-#[cfg_attr(feature = "serialize", derive(Serialize))]
 pub struct StackPointer {
-    name: String,
-    value: u16
+    pub value: u16,
 }
 
-impl Register<u16> for StackPointer {
-
-    fn get(&self) -> u16 {
-        println!("[REG {}] Reading value: 0x{:x}", self.name, self.value);
-        return self.value;
+impl StackPointer {
+    pub fn new() -> StackPointer {
+        StackPointer {
+            value: 0,
+        }
     }
 
-    fn set(&mut self, value: u16) {
-        println!("[REG {}] Writing value: 0x{:x}", self.name, value);
+    pub fn get(&self) -> u16 {
+        self.value
+    }
+
+    pub fn set(&mut self, value: u16) {
         self.value = value;
     }
 }
 
-impl StackPointer {
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    pub fn new(name: &str) -> Self {
-        StackPointer {
-            name: String::from(name),
-            value: 0x0
-        }
+    #[test]
+    fn test_get() {
+        let mut stack_pointer = StackPointer::new();
+        stack_pointer.value = 0x1234;
+        assert_eq!(stack_pointer.get(), 0x1234);
+    }
+
+    #[test]
+    fn test_set() {
+        let mut stack_pointer = StackPointer::new();
+        stack_pointer.set(0x1234);
+        assert_eq!(stack_pointer.value, 0x1234);
     }
 }

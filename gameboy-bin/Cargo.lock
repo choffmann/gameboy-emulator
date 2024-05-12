@@ -3,12 +3,12 @@
 version = 3
 
 [[package]]
-name = "gameboy"
-version = "0.1.0"
-
-[[package]]
 name = "gameboy-bin"
 version = "0.1.0"
 dependencies = [
- "gameboy",
+ "gameboy-lib",
 ]
+
+[[package]]
+name = "gameboy-lib"
+version = "0.1.0"
