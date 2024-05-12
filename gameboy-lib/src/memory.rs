@@ -90,6 +90,12 @@ impl Memory {
         }
     }
 
+    pub fn read_16(&self, address: u16) -> u16 {
+        let low = self.read(address) as u16;
+        let high = self.read(address + 1) as u16;
+        (high << 8) | low
+    }
+
     pub fn write(&mut self, address: u16, value: u8) {
         println!("[MEM] Writing to memory address: 0x{:X} value: 0x{:X}", address, value);
         let address = address as usize;

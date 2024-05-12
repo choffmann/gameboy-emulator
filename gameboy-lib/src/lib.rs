@@ -17,6 +17,10 @@ impl Gameboy {
     pub fn start(&mut self) {
         println!("Starting Gameboy");
         self.cpu.boot(self.boot_rom.clone());
+
+        loop {
+            self.cpu.step();
+        }
     }
 }
 
