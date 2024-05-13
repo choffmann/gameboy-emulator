@@ -11,6 +11,8 @@ pub enum Instruction {
     LdAn,                     // Load $FF00 + n into A
     LdHi,                     // Load A into HL + 1
     LdHd,                     // Load A into HL - 1
+    Push(Register),           // Push register onto stack
+    Pop(Register),            // Pop register from stack
 }
 
 impl Instruction {
@@ -138,6 +140,16 @@ impl Instruction {
             0xF9 => Some(Instruction::Ld16(Register::SP, Register::HL)),
             0xF8 => Some(Instruction::Ld16(Register::SP, Register::D8)),
             0x08 => Some(Instruction::Ld16(Register::D16, Register::SP)),
+
+            0xF5 => Some(Instruction::Push(Register::AF)),
+            0xC5 => Some(Instruction::Push(Register::BC)),
+            0xD5 => Some(Instruction::Push(Register::DE)),
+            0xE5 => Some(Instruction::Push(Register::HL)),
+
+            0xF1 => Some(Instruction::Pop(Register::AF)),
+            0xC1 => Some(Instruction::Pop(Register::BC)),
+            0xD1 => Some(Instruction::Pop(Register::DE)),
+            0xE1 => Some(Instruction::Pop(Register::HL)),
 
             _ => None,
         }

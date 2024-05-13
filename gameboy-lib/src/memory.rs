@@ -115,6 +115,13 @@ impl Memory {
         }
     }
 
+    pub fn write_16(&mut self, address: u16, value: u16) {
+        let low = value as u8;
+        let high = (value >> 8) as u8;
+        self.write(address, low);
+        self.write(address + 1, high);
+    }
+
     pub fn write_vec(&mut self, start_address: u16, data: Vec<u8>) {
         for (i, byte) in data.iter().enumerate() {
             self.write(start_address + i as u16, *byte);
@@ -248,5 +255,22 @@ mod tests {
         assert_eq!(memory.read(0xFF00), 0x09);
         assert_eq!(memory.read(0xFF80), 0x0A);
         assert_eq!(memory.read(0xFFFF), 0x0B);
+    }
+
+    #[test]
+    fn test_read_write_16() {
+        let mut memory = Memory::new();
+        memory.write_16(0x0000, 0x0102);
+        assert_eq!(memory.read(0x0000), 0x02);
+        assert_eq!(memory.read(0x0001), 0x01);
+    }
+
+    #[test]
+    fn test_read_write_vec() {
+        let mut memory = Memory::new();
+        memory.write_vec(0x0000, vec![0x01, 0x02, 0x03]);
+        assert_eq!(memory.read(0x0000), 0x01);
+        assert_eq!(memory.read(0x0001), 0x02);
+        assert_eq!(memory.read(0x0002), 0x03);
     }
 }
