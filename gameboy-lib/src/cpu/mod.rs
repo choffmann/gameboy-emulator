@@ -59,133 +59,86 @@ impl Cpu {
             Instruction::Pop(register) => self.pop(register),
             Instruction::Add(_) | Instruction::Adc(_) => self.add(instruction),
             Instruction::Sub(_) | Instruction::Sbc(_) => self.sub(instruction),
+            Instruction::And(_) => self.and(instruction),
             _ => panic!("[CPU] Not implementet {:?}", instruction),
         }
     }
 
-    fn exec_add(&mut self, a: u8, b: u8, carry: bool) {
-        let carry_value = if carry && self.registers.f.carry { 1 } else { 0 };
-        let (add, frist_did_overflow) = a.overflowing_add(b);
-        let (new_value, result_did_overflow) = add.overflowing_add(carry_value);
+    fn and(&mut self, instruction: Instruction) -> u16 {
+        let value = match instruction {
+            Instruction::And(from) => match &from {
+                Register::D8 => self.memory.read(self.pc + 1),
+                Register::HL => self.memory.read(self.registers.get_16(&Register::HL)),
+                _ => self.registers.get(&from),
+            },
+            _ => panic!("[CPU] Invalid instruction {:?}", instruction),
+        };
 
-        self.registers.f.zero = new_value == 0;
+        let a = self.registers.get(&Register::A);
+        let result = a & value;
+
+        self.registers.f.zero = result == 0;
         self.registers.f.subtract = false;
-        self.registers.f.half_carry = (((a & 0xF) + (b & 0xF)) & 0x10) == 0x10;
-        self.registers.f.carry = frist_did_overflow || result_did_overflow;
-        self.registers.set(&Register::A, new_value);
+        self.registers.f.half_carry = true;
+        self.registers.f.carry = false;
+        self.registers.set(&Register::A, result);
+
+        self.pc.wrapping_add(2)
     }
+
 
     fn add(&mut self, instruction: Instruction) -> u16 {
-        match instruction {
+        let value = match instruction {
             Instruction::Add(from) => match &from {
-                Register::D8 => {
-                    let value = self.memory.read(self.pc + 1);
-                    let a = self.registers.get(&Register::A);
-                    self.exec_add(a, value, false);
-                    self.pc.wrapping_add(2)
-                }
-                Register::HL => {
-                    let value = self.memory.read(self.registers.get_16(&Register::HL));
-                    let a = self.registers.get(&Register::A);
-                    self.exec_add(a, value, false);
-                    self.pc.wrapping_add(1)
-                }
-                _ => {
-                    let value = self.registers.get(&from);
-                    let a = self.registers.get(&Register::A);
-                    self.exec_add(a, value, false);
-                    self.pc.wrapping_add(1)
-                }
+                Register::D8 => self.memory.read(self.pc + 1),
+                Register::HL => self.memory.read(self.registers.get_16(&Register::HL)),
+                _ => self.registers.get(&from),
             },
             Instruction::Adc(from) => match &from {
-                Register::D8 => {
-                    let value = self.memory.read(self.pc + 1);
-                    let a = self.registers.get(&Register::A);
-                    self.exec_add(a, value, true);
-                    self.pc.wrapping_add(2)
-                }
-                Register::HL => {
-                    let value = self.memory.read(self.registers.get_16(&Register::HL));
-                    let a = self.registers.get(&Register::A);
-                    self.exec_add(a, value, true);
-                    self.pc.wrapping_add(1)
-                }
-                _ => {
-                    let value = self.registers.get(&from);
-                    let a = self.registers.get(&Register::A);
-                    self.exec_add(a, value, true);
-                    self.pc.wrapping_add(1)
-                }
+                Register::D8 => self.memory.read(self.pc + 1) + if self.registers.f.carry { 1 } else { 0 },
+                Register::HL => self.memory.read(self.registers.get_16(&Register::HL)) + if self.registers.f.carry { 1 } else { 0 },
+                _ => self.registers.get(&from) + if self.registers.f.carry { 1 } else { 0 },
             },
             _ => panic!("[CPU] Invalid instruction {:?}", instruction),
-        }
+        };
+
+        let a = self.registers.get(&Register::A);
+        let (result, did_overflow) = a.overflowing_add(value);
+
+        self.registers.f.zero = result == 0;
+        self.registers.f.subtract = false;
+        self.registers.f.half_carry = (((a & 0xF) + (value & 0xF)) & 0x10) == 0x10;
+        self.registers.f.carry = did_overflow;
+        self.registers.set(&Register::A, result);
+        self.pc.wrapping_add(1)
     }
 
-    fn exec_sub(&mut self, a: u8, b: u8, carry: bool) {
-        let carry_value = if carry && self.registers.f.carry { 1 } else { 0 };
-        let (sub, first_did_underflow) = a.overflowing_sub(b);
-        let (new_value, result_did_underflow) = sub.overflowing_sub(carry_value);
-
-        self.registers.set(&Register::A, new_value);
-        self.registers.f.zero = new_value == 0;
-        self.registers.f.subtract = true;
-        self.registers.f.half_carry = (((a & 0xF) + (b & 0xF)) & 0x10) == 0x10;
-        println!(
-            "[CPU] SUB: 0x{:x} - 0x{:x} = 0x{:x}",
-            a, b, new_value
-        );
-        println!(
-            "[CPU] SUB: Half carry: {}",
-            (((a & 0xF) + (b & 0xF)) & 0x10) == 0x10
-            
-        );
-        self.registers.f.carry = first_did_underflow || result_did_underflow;
-    }
 
     fn sub(&mut self, instruction: Instruction) -> u16 {
-        match instruction {
+        let value = match instruction {
             Instruction::Sub(from) => match &from {
-                Register::D8 => {
-                    let value = self.memory.read(self.pc + 1);
-                    let a = self.registers.get(&Register::A);
-                    self.exec_sub(a, value, false);
-                    self.pc.wrapping_add(2)
-                }
-                Register::HL => {
-                    let value = self.memory.read(self.registers.get_16(&Register::HL));
-                    let a = self.registers.get(&Register::A);
-                    self.exec_sub(a, value, false);
-                    self.pc.wrapping_add(1)
-                }
-                _ => {
-                    let value = self.registers.get(&from);
-                    let a = self.registers.get(&Register::A);
-                    self.exec_sub(a, value, false);
-                    self.pc.wrapping_add(1)
-                }
+                Register::D8 => self.memory.read(self.pc + 1),
+                Register::HL => self.memory.read(self.registers.get_16(&Register::HL)),
+                _ => self.registers.get(&from),
             },
             Instruction::Sbc(from) => match &from {
-                Register::D8 => {
-                    let value = self.memory.read(self.pc + 1);
-                    let a = self.registers.get(&Register::A);
-                    self.exec_sub(a, value, true);
-                    self.pc.wrapping_add(2)
-                }
-                Register::HL => {
-                    let value = self.memory.read(self.registers.get_16(&Register::HL));
-                    let a = self.registers.get(&Register::A);
-                    self.exec_sub(a, value, true);
-                    self.pc.wrapping_add(1)
-                }
-                _ => {
-                    let value = self.registers.get(&from);
-                    let a = self.registers.get(&Register::A);
-                    self.exec_sub(a, value, true);
-                    self.pc.wrapping_add(1)
-                }
+                Register::D8 => self.memory.read(self.pc + 1) + if self.registers.f.carry { 1 } else { 0 },
+                Register::HL => self.memory.read(self.registers.get_16(&Register::HL)) + if self.registers.f.carry { 1 } else { 0 },
+                _ => self.registers.get(&from) + if self.registers.f.carry { 1 } else { 0 },
             },
             _ => panic!("[CPU] Invalid instruction {:?}", instruction),
-        }
+        };
+
+        let a = self.registers.get(&Register::A);
+        let (result, did_overflow) = a.overflowing_sub(value);
+
+        self.registers.f.zero = result == 0;
+        self.registers.f.subtract = true;
+        self.registers.f.half_carry = (((a & 0xF) + (value & 0xF)) & 0x10) == 0x10;
+        self.registers.f.carry = did_overflow;
+        self.registers.set(&Register::A, result);
+
+        self.pc.wrapping_add(1)
     }
 
     fn push(&mut self, register: Register) -> u16 {
@@ -907,7 +860,7 @@ mod tests {
         assert_eq!(cpu.registers.f.carry, false);
         cpu.step();
 
-        // Add A (HL) 
+        // Add A (HL)
         assert_eq!(cpu.registers.get(&Register::A), 0x3F);
         assert_eq!(cpu.registers.f.zero, false);
         assert_eq!(cpu.registers.f.subtract, false);
@@ -928,7 +881,9 @@ mod tests {
         cpu.registers.set(&Register::L, 0x10);
         cpu.memory.write(0x0F10, 0x01);
 
-        cpu.boot(vec![0x8F, 0x88, 0x89, 0x8A, 0x8B, 0x8C, 0x8D, 0x8E, 0xCE, 0x42]);
+        cpu.boot(vec![
+            0x8F, 0x88, 0x89, 0x8A, 0x8B, 0x8C, 0x8D, 0x8E, 0xCE, 0x42,
+        ]);
 
         cpu.step();
         assert_eq!(cpu.registers.get(&Register::A), 0x00); // Add A 0x00 from A
@@ -1092,7 +1047,9 @@ mod tests {
         cpu.registers.set(&Register::L, 0x10);
         cpu.memory.write(0x0F10, 0x01);
 
-        cpu.boot(vec![0x9F, 0x98, 0x99, 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0xDE, 0x42]);
+        cpu.boot(vec![
+            0x9F, 0x98, 0x99, 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0xDE, 0x42,
+        ]);
 
         cpu.step();
         assert_eq!(cpu.registers.get(&Register::A), 0x00); // Sub A 0x00 from A
