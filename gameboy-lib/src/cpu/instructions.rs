@@ -13,6 +13,10 @@ pub enum Instruction {
     LdHd,                     // Load A into HL - 1
     Push(Register),           // Push register onto stack
     Pop(Register),            // Pop register from stack
+    Add(Register),            // Add register to A
+    Adc(Register),            // Add register to A with carry
+    Sub(Register),            // Subtract register from A
+    Sbc(Register),            // Subtract register from A with carry
 }
 
 impl Instruction {
@@ -150,6 +154,46 @@ impl Instruction {
             0xC1 => Some(Instruction::Pop(Register::BC)),
             0xD1 => Some(Instruction::Pop(Register::DE)),
             0xE1 => Some(Instruction::Pop(Register::HL)),
+
+            0x87 => Some(Instruction::Add(Register::A)),
+            0x80 => Some(Instruction::Add(Register::B)),
+            0x81 => Some(Instruction::Add(Register::C)),
+            0x82 => Some(Instruction::Add(Register::D)),
+            0x83 => Some(Instruction::Add(Register::E)),
+            0x84 => Some(Instruction::Add(Register::H)),
+            0x85 => Some(Instruction::Add(Register::L)),
+            0x86 => Some(Instruction::Add(Register::HL)),
+            0xC6 => Some(Instruction::Add(Register::D8)),
+
+            0x8F => Some(Instruction::Adc(Register::A)),
+            0x88 => Some(Instruction::Adc(Register::B)),
+            0x89 => Some(Instruction::Adc(Register::C)),
+            0x8A => Some(Instruction::Adc(Register::D)),
+            0x8B => Some(Instruction::Adc(Register::E)),
+            0x8C => Some(Instruction::Adc(Register::H)),
+            0x8D => Some(Instruction::Adc(Register::L)),
+            0x8E => Some(Instruction::Adc(Register::HL)),
+            0xCE => Some(Instruction::Adc(Register::D8)),
+
+            0x97 => Some(Instruction::Sub(Register::A)),
+            0x90 => Some(Instruction::Sub(Register::B)),
+            0x91 => Some(Instruction::Sub(Register::C)),
+            0x92 => Some(Instruction::Sub(Register::D)),
+            0x93 => Some(Instruction::Sub(Register::E)),
+            0x94 => Some(Instruction::Sub(Register::H)),
+            0x95 => Some(Instruction::Sub(Register::L)),
+            0x96 => Some(Instruction::Sub(Register::HL)),
+            0xD6 => Some(Instruction::Sub(Register::D8)),
+
+            0x9F => Some(Instruction::Sbc(Register::A)),
+            0x98 => Some(Instruction::Sbc(Register::B)),
+            0x99 => Some(Instruction::Sbc(Register::C)),
+            0x9A => Some(Instruction::Sbc(Register::D)),
+            0x9B => Some(Instruction::Sbc(Register::E)),
+            0x9C => Some(Instruction::Sbc(Register::H)),
+            0x9D => Some(Instruction::Sbc(Register::L)),
+            0x9E => Some(Instruction::Sbc(Register::HL)),
+            0xDE => Some(Instruction::Sbc(Register::D8)),
 
             _ => None,
         }

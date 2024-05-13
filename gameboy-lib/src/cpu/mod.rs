@@ -57,7 +57,134 @@ impl Cpu {
             | Instruction::LdHd => self.load_special(instruction),
             Instruction::Push(register) => self.push(register),
             Instruction::Pop(register) => self.pop(register),
+            Instruction::Add(_) | Instruction::Adc(_) => self.add(instruction),
+            Instruction::Sub(_) | Instruction::Sbc(_) => self.sub(instruction),
             _ => panic!("[CPU] Not implementet {:?}", instruction),
+        }
+    }
+
+    fn exec_add(&mut self, a: u8, b: u8, carry: bool) {
+        let carry_value = if carry && self.registers.f.carry { 1 } else { 0 };
+        let (add, frist_did_overflow) = a.overflowing_add(b);
+        let (new_value, result_did_overflow) = add.overflowing_add(carry_value);
+
+        self.registers.f.zero = new_value == 0;
+        self.registers.f.subtract = false;
+        self.registers.f.half_carry = (((a & 0xF) + (b & 0xF)) & 0x10) == 0x10;
+        self.registers.f.carry = frist_did_overflow || result_did_overflow;
+        self.registers.set(&Register::A, new_value);
+    }
+
+    fn add(&mut self, instruction: Instruction) -> u16 {
+        match instruction {
+            Instruction::Add(from) => match &from {
+                Register::D8 => {
+                    let value = self.memory.read(self.pc + 1);
+                    let a = self.registers.get(&Register::A);
+                    self.exec_add(a, value, false);
+                    self.pc.wrapping_add(2)
+                }
+                Register::HL => {
+                    let value = self.memory.read(self.registers.get_16(&Register::HL));
+                    let a = self.registers.get(&Register::A);
+                    self.exec_add(a, value, false);
+                    self.pc.wrapping_add(1)
+                }
+                _ => {
+                    let value = self.registers.get(&from);
+                    let a = self.registers.get(&Register::A);
+                    self.exec_add(a, value, false);
+                    self.pc.wrapping_add(1)
+                }
+            },
+            Instruction::Adc(from) => match &from {
+                Register::D8 => {
+                    let value = self.memory.read(self.pc + 1);
+                    let a = self.registers.get(&Register::A);
+                    self.exec_add(a, value, true);
+                    self.pc.wrapping_add(2)
+                }
+                Register::HL => {
+                    let value = self.memory.read(self.registers.get_16(&Register::HL));
+                    let a = self.registers.get(&Register::A);
+                    self.exec_add(a, value, true);
+                    self.pc.wrapping_add(1)
+                }
+                _ => {
+                    let value = self.registers.get(&from);
+                    let a = self.registers.get(&Register::A);
+                    self.exec_add(a, value, true);
+                    self.pc.wrapping_add(1)
+                }
+            },
+            _ => panic!("[CPU] Invalid instruction {:?}", instruction),
+        }
+    }
+
+    fn exec_sub(&mut self, a: u8, b: u8, carry: bool) {
+        let carry_value = if carry && self.registers.f.carry { 1 } else { 0 };
+        let (sub, first_did_underflow) = a.overflowing_sub(b);
+        let (new_value, result_did_underflow) = sub.overflowing_sub(carry_value);
+
+        self.registers.set(&Register::A, new_value);
+        self.registers.f.zero = new_value == 0;
+        self.registers.f.subtract = true;
+        self.registers.f.half_carry = (((a & 0xF) + (b & 0xF)) & 0x10) == 0x10;
+        println!(
+            "[CPU] SUB: 0x{:x} - 0x{:x} = 0x{:x}",
+            a, b, new_value
+        );
+        println!(
+            "[CPU] SUB: Half carry: {}",
+            (((a & 0xF) + (b & 0xF)) & 0x10) == 0x10
+            
+        );
+        self.registers.f.carry = first_did_underflow || result_did_underflow;
+    }
+
+    fn sub(&mut self, instruction: Instruction) -> u16 {
+        match instruction {
+            Instruction::Sub(from) => match &from {
+                Register::D8 => {
+                    let value = self.memory.read(self.pc + 1);
+                    let a = self.registers.get(&Register::A);
+                    self.exec_sub(a, value, false);
+                    self.pc.wrapping_add(2)
+                }
+                Register::HL => {
+                    let value = self.memory.read(self.registers.get_16(&Register::HL));
+                    let a = self.registers.get(&Register::A);
+                    self.exec_sub(a, value, false);
+                    self.pc.wrapping_add(1)
+                }
+                _ => {
+                    let value = self.registers.get(&from);
+                    let a = self.registers.get(&Register::A);
+                    self.exec_sub(a, value, false);
+                    self.pc.wrapping_add(1)
+                }
+            },
+            Instruction::Sbc(from) => match &from {
+                Register::D8 => {
+                    let value = self.memory.read(self.pc + 1);
+                    let a = self.registers.get(&Register::A);
+                    self.exec_sub(a, value, true);
+                    self.pc.wrapping_add(2)
+                }
+                Register::HL => {
+                    let value = self.memory.read(self.registers.get_16(&Register::HL));
+                    let a = self.registers.get(&Register::A);
+                    self.exec_sub(a, value, true);
+                    self.pc.wrapping_add(1)
+                }
+                _ => {
+                    let value = self.registers.get(&from);
+                    let a = self.registers.get(&Register::A);
+                    self.exec_sub(a, value, true);
+                    self.pc.wrapping_add(1)
+                }
+            },
+            _ => panic!("[CPU] Invalid instruction {:?}", instruction),
         }
     }
 
@@ -666,5 +793,324 @@ mod tests {
         assert_eq!(cpu.registers.get_16(&Register::DE), 0x5678);
         cpu.step();
         assert_eq!(cpu.registers.get_16(&Register::HL), 0x1234);
+    }
+
+    #[test]
+    fn execute_add() {
+        let mut cpu = Cpu::new();
+        cpu.registers.set(&Register::A, 0x00);
+        cpu.registers.set(&Register::B, 0x01);
+        cpu.registers.set(&Register::C, 0x02);
+        cpu.registers.set(&Register::D, 0x03);
+        cpu.registers.set(&Register::E, 0x04);
+        cpu.registers.set(&Register::H, 0x05);
+        cpu.registers.set(&Register::L, 0x06);
+        cpu.memory.write(0x0506, 0x07);
+
+        cpu.boot(vec![
+            0x87, 0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0xC6, 0x42,
+        ]);
+        cpu.step();
+
+        // Add A 0x00
+        assert_eq!(cpu.registers.get(&Register::A), 0x00);
+        cpu.step();
+
+        // Add A 0x01
+        assert_eq!(cpu.registers.get(&Register::A), 0x01);
+        cpu.step();
+
+        // Add A 0x02
+        assert_eq!(cpu.registers.get(&Register::A), 0x03);
+        cpu.step();
+
+        // Add A 0x03
+        assert_eq!(cpu.registers.get(&Register::A), 0x06);
+        cpu.step();
+
+        // Add A 0x04
+        assert_eq!(cpu.registers.get(&Register::A), 0x0A);
+        cpu.step();
+
+        // Add A 0x05
+        assert_eq!(cpu.registers.get(&Register::A), 0x0F);
+        cpu.step();
+
+        // Add A 0x06
+        assert_eq!(cpu.registers.get(&Register::A), 0x15);
+        cpu.step();
+
+        // Add A (HL)
+        assert_eq!(cpu.registers.get(&Register::A), 0x1C);
+    }
+
+    #[test]
+    fn execute_add_carry() {
+        let mut cpu = Cpu::new();
+        cpu.registers.set(&Register::A, 0x00);
+        cpu.registers.set(&Register::B, 0xFF);
+        cpu.registers.set(&Register::C, 0x01);
+        cpu.registers.set(&Register::D, 0x0F);
+        cpu.registers.set(&Register::E, 0x10);
+        cpu.registers.set(&Register::H, 0x0F);
+        cpu.registers.set(&Register::L, 0x10);
+        cpu.memory.write(0x0F10, 0x01);
+
+        cpu.boot(vec![0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0xC6, 0x42]);
+        cpu.step();
+
+        // Add A 0xFF from B
+        assert_eq!(cpu.registers.get(&Register::A), 0xFF);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, false);
+        assert_eq!(cpu.registers.f.carry, false);
+        cpu.step();
+
+        // Add A 0x01 from C
+        assert_eq!(cpu.registers.get(&Register::A), 0x00);
+        assert_eq!(cpu.registers.f.zero, true);
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, true);
+        assert_eq!(cpu.registers.f.carry, true);
+        cpu.step();
+
+        // Add A 0x0F from D
+        assert_eq!(cpu.registers.get(&Register::A), 0x0F);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, false);
+        assert_eq!(cpu.registers.f.carry, false);
+        cpu.step();
+
+        // Add A 0x10 from E
+        assert_eq!(cpu.registers.get(&Register::A), 0x1F);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, false);
+        assert_eq!(cpu.registers.f.carry, false);
+        cpu.step();
+
+        // Add A 0x0F from H
+        assert_eq!(cpu.registers.get(&Register::A), 0x2E);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, true);
+        assert_eq!(cpu.registers.f.carry, false);
+        cpu.step();
+
+        // Add A 0x10 from L
+        assert_eq!(cpu.registers.get(&Register::A), 0x3E);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, false);
+        assert_eq!(cpu.registers.f.carry, false);
+        cpu.step();
+
+        // Add A (HL) 
+        assert_eq!(cpu.registers.get(&Register::A), 0x3F);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, false);
+        assert_eq!(cpu.registers.f.carry, false);
+    }
+
+    #[test]
+    fn execute_adc() {
+        let mut cpu = Cpu::new();
+
+        cpu.registers.set(&Register::A, 0x00);
+        cpu.registers.set(&Register::B, 0xFF);
+        cpu.registers.set(&Register::C, 0x01);
+        cpu.registers.set(&Register::D, 0x0F);
+        cpu.registers.set(&Register::E, 0x10);
+        cpu.registers.set(&Register::H, 0x0F);
+        cpu.registers.set(&Register::L, 0x10);
+        cpu.memory.write(0x0F10, 0x01);
+
+        cpu.boot(vec![0x8F, 0x88, 0x89, 0x8A, 0x8B, 0x8C, 0x8D, 0x8E, 0xCE, 0x42]);
+
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0x00); // Add A 0x00 from A
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0xFF); // Add A 0xFF from B
+        cpu.step();
+        println!("{:?}", cpu.registers);
+        assert_eq!(cpu.registers.get(&Register::A), 0x00); // Add A 0x01 from C
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0x10); // Add A 0x0F from D carry 1
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0x20); // Add A 0x10 from E
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0x2F); // Add A 0x0F from H
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0x3F); // Add A 0x10 from L
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0x40); // Add A (HL)
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0x82); // Add A 0x42
+    }
+
+    #[test]
+    fn execute_sub() {
+        let mut cpu = Cpu::new();
+        cpu.registers.set(&Register::A, 0x00);
+        cpu.registers.set(&Register::B, 0x01);
+        cpu.registers.set(&Register::C, 0x02);
+        cpu.registers.set(&Register::D, 0x03);
+        cpu.registers.set(&Register::E, 0x04);
+        cpu.registers.set(&Register::H, 0x05);
+        cpu.registers.set(&Register::L, 0x06);
+        cpu.memory.write(0x0506, 0x07);
+
+        cpu.boot(vec![
+            0x97, 0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0xD6, 0x42,
+        ]);
+        cpu.step();
+
+        // Sub A 0x00
+        assert_eq!(cpu.registers.get(&Register::A), 0x00);
+        cpu.step();
+
+        // Sub A 0x01
+        assert_eq!(cpu.registers.get(&Register::A), 0xFF);
+        cpu.step();
+
+        // Sub A 0x02
+        assert_eq!(cpu.registers.get(&Register::A), 0xFD);
+        cpu.step();
+
+        // Sub A 0x03
+        assert_eq!(cpu.registers.get(&Register::A), 0xFA);
+        cpu.step();
+
+        // Sub A 0x04
+        assert_eq!(cpu.registers.get(&Register::A), 0xF6);
+        cpu.step();
+
+        // Sub A 0x05
+        assert_eq!(cpu.registers.get(&Register::A), 0xF1);
+        cpu.step();
+
+        // Sub A 0x06
+        assert_eq!(cpu.registers.get(&Register::A), 0xEB);
+        cpu.step();
+
+        // Sub A (HL)
+        assert_eq!(cpu.registers.get(&Register::A), 0xE4);
+    }
+
+    #[test]
+    fn execute_sub_carry() {
+        let mut cpu = Cpu::new();
+        cpu.registers.set(&Register::A, 0x00);
+        cpu.registers.set(&Register::B, 0xFF);
+        cpu.registers.set(&Register::C, 0x01);
+        cpu.registers.set(&Register::D, 0x0F);
+        cpu.registers.set(&Register::E, 0x10);
+        cpu.registers.set(&Register::H, 0x0F);
+        cpu.registers.set(&Register::L, 0x10);
+        cpu.memory.write(0x0F10, 0x01);
+
+        cpu.boot(vec![0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0xD6, 0x42]);
+        cpu.step();
+
+        // Sub A 0xFF from B
+        assert_eq!(cpu.registers.get(&Register::A), 0x01);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.subtract, true);
+        assert_eq!(cpu.registers.f.half_carry, false);
+        assert_eq!(cpu.registers.f.carry, true);
+        cpu.step();
+
+        // Sub A 0x01 from C
+        assert_eq!(cpu.registers.get(&Register::A), 0x00);
+        assert_eq!(cpu.registers.f.zero, true);
+        assert_eq!(cpu.registers.f.subtract, true);
+        assert_eq!(cpu.registers.f.half_carry, false);
+        assert_eq!(cpu.registers.f.carry, false);
+        cpu.step();
+
+        // Sub A 0x0F from D
+        assert_eq!(cpu.registers.get(&Register::A), 0xF1);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.subtract, true);
+        assert_eq!(cpu.registers.f.half_carry, false);
+        assert_eq!(cpu.registers.f.carry, true);
+        cpu.step();
+
+        // Sub A 0x10 from E
+        assert_eq!(cpu.registers.get(&Register::A), 0xE1);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.subtract, true);
+        assert_eq!(cpu.registers.f.half_carry, false);
+        assert_eq!(cpu.registers.f.carry, false);
+        cpu.step();
+
+        // Sub A 0x0F from H
+        assert_eq!(cpu.registers.get(&Register::A), 0xD2);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.subtract, true);
+        assert_eq!(cpu.registers.f.half_carry, true);
+        assert_eq!(cpu.registers.f.carry, false);
+        cpu.step();
+
+        // Sub A 0x10 from L
+        assert_eq!(cpu.registers.get(&Register::A), 0xC2);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.subtract, true);
+        assert_eq!(cpu.registers.f.half_carry, false);
+        assert_eq!(cpu.registers.f.carry, false);
+        cpu.step();
+
+        // Sub A (HL)
+        assert_eq!(cpu.registers.get(&Register::A), 0xC1);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.subtract, true);
+        assert_eq!(cpu.registers.f.half_carry, false);
+        assert_eq!(cpu.registers.f.carry, false);
+        cpu.step();
+
+        // Sub A 0x42
+        assert_eq!(cpu.registers.get(&Register::A), 0x7F);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.subtract, true);
+        assert_eq!(cpu.registers.f.half_carry, false);
+        assert_eq!(cpu.registers.f.carry, false);
+    }
+
+    #[test]
+    fn execute_sbc() {
+        let mut cpu = Cpu::new();
+
+        cpu.registers.set(&Register::A, 0x00);
+        cpu.registers.set(&Register::B, 0xFF);
+        cpu.registers.set(&Register::C, 0x01);
+        cpu.registers.set(&Register::D, 0x0F);
+        cpu.registers.set(&Register::E, 0x10);
+        cpu.registers.set(&Register::H, 0x0F);
+        cpu.registers.set(&Register::L, 0x10);
+        cpu.memory.write(0x0F10, 0x01);
+
+        cpu.boot(vec![0x9F, 0x98, 0x99, 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0xDE, 0x42]);
+
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0x00); // Sub A 0x00 from A
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0x01); // Sub A 0xFF from B
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0xFF); // Sub A 0x01 from C
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0xEF); // Sub A 0x0F from D carry 1
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0xDF); // Sub A 0x10 from E
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0xD0); // Sub A 0x0F from H
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0xC0); // Sub A 0x10 from L
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0xBF); // Sub A (HL)
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0x7D); // Sub A 0x42
     }
 }

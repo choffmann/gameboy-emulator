@@ -1,4 +1,5 @@
 
+#[derive(Debug)]
 pub struct StackPointer {
     pub value: u16,
 }

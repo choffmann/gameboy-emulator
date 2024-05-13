@@ -22,6 +22,7 @@ pub enum Register {
     D16,
 }
 
+#[derive(Debug)]
 pub struct Registers {
     pub a: u8,
     pub b: u8,
