@@ -34,7 +34,11 @@ impl Cpu {
             opcode
         };
 
-        println!("[CPU] Next instruction 0x{:x}", instruction);
+        if !prefixed {
+            println!("[CPU] PC: 0x{:x} Opcode: 0x{:x}", self.pc, opcode);
+        } else {
+            println!("[CPU] PC: 0x{:x} Prefixed: 0x{:x}", self.pc, instruction);
+        }
 
         let next_pc = match Instruction::from_byte(instruction, prefixed) {
             Some(instruction) => self.execute(instruction, prefixed),
@@ -70,11 +74,11 @@ impl Cpu {
     }
 
     fn and(&mut self, instruction: Instruction) -> u16 {
-        let value = match instruction {
+        let (value, pc) = match instruction {
             Instruction::And(from) => match &from {
-                Register::D8 => self.memory.read(self.pc + 1),
-                Register::HL => self.memory.read(self.registers.get_16(&Register::HL)),
-                _ => self.registers.get(&from),
+                Register::D8 => (self.memory.read(self.pc + 1), self.pc.wrapping_add(2)),
+                Register::HL => (self.memory.read(self.registers.get_16(&Register::HL)), self.pc.wrapping_add(1)),
+                _ => (self.registers.get(&from), self.pc.wrapping_add(1)),
             },
             _ => panic!("[CPU] Invalid instruction {:?}", instruction),
         };
@@ -88,15 +92,15 @@ impl Cpu {
         self.registers.f.carry = false;
         self.registers.set(&Register::A, result);
 
-        self.pc.wrapping_add(2)
+        pc
     }
 
     fn or(&mut self, instruction: Instruction) -> u16 {
-        let value = match instruction {
+        let (value, pc) = match instruction {
             Instruction::Or(from) => match &from {
-                Register::D8 => self.memory.read(self.pc + 1),
-                Register::HL => self.memory.read(self.registers.get_16(&Register::HL)),
-                _ => self.registers.get(&from),
+                Register::D8 => (self.memory.read(self.pc + 1), self.pc.wrapping_add(2)),
+                Register::HL => (self.memory.read(self.registers.get_16(&Register::HL)), self.pc.wrapping_add(1)),
+                _ => (self.registers.get(&from), self.pc.wrapping_add(1)),
             },
             _ => panic!("[CPU] Invalid instruction {:?}", instruction),
         };
@@ -110,15 +114,15 @@ impl Cpu {
         self.registers.f.carry = false;
         self.registers.set(&Register::A, result);
 
-        self.pc.wrapping_add(2)
+        pc
     }
 
     fn xor(&mut self, instruction: Instruction) -> u16 {
-        let value = match instruction {
+        let (value, pc) = match instruction {
             Instruction::Xor(from) => match &from {
-                Register::D8 => self.memory.read(self.pc + 1),
-                Register::HL => self.memory.read(self.registers.get_16(&Register::HL)),
-                _ => self.registers.get(&from),
+                Register::D8 => (self.memory.read(self.pc + 1), self.pc.wrapping_add(2)),
+                Register::HL => (self.memory.read(self.registers.get_16(&Register::HL)), self.pc.wrapping_add(1)),
+                _ => (self.registers.get(&from), self.pc.wrapping_add(1)),
             },
             _ => panic!("[CPU] Invalid instruction {:?}", instruction),
         };
@@ -132,15 +136,15 @@ impl Cpu {
         self.registers.f.carry = false;
         self.registers.set(&Register::A, result);
 
-        self.pc.wrapping_add(2)
+        pc
     }
 
     fn compare(&mut self, instruction: Instruction) -> u16 {
-        let value = match instruction {
+        let (value, pc) = match instruction {
             Instruction::Cp(from) => match &from {
-                Register::D8 => self.memory.read(self.pc + 1),
-                Register::HL => self.memory.read(self.registers.get_16(&Register::HL)),
-                _ => self.registers.get(&from),
+                Register::D8 => (self.memory.read(self.pc + 1), self.pc.wrapping_add(2)),
+                Register::HL => (self.memory.read(self.registers.get_16(&Register::HL)), self.pc.wrapping_add(1)),
+                _ => (self.registers.get(&from), self.pc.wrapping_add(1)),
             },
             _ => panic!("[CPU] Invalid instruction {:?}", instruction),
         };
@@ -153,7 +157,7 @@ impl Cpu {
         self.registers.f.half_carry = (a & 0xF) < (value & 0xF);
         self.registers.f.carry = a < value;
 
-        self.pc.wrapping_add(2)
+        pc
     }
 
     fn inc(&mut self, register: Register) -> u16 {
@@ -189,21 +193,26 @@ impl Cpu {
     }
 
     fn add(&mut self, instruction: Instruction) -> u16 {
-        let value = match instruction {
+        let (value, pc) = match instruction {
             Instruction::Add(from) => match &from {
-                Register::D8 => self.memory.read(self.pc + 1),
-                Register::HL => self.memory.read(self.registers.get_16(&Register::HL)),
-                _ => self.registers.get(&from),
+                Register::D8 => (self.memory.read(self.pc + 1), self.pc.wrapping_add(2)),
+                Register::HL => (self.memory.read(self.registers.get_16(&Register::HL)), self.pc.wrapping_add(1)),
+                _ => (self.registers.get(&from), self.pc.wrapping_add(1)),
             },
             Instruction::Adc(from) => match &from {
                 Register::D8 => {
-                    self.memory.read(self.pc + 1) + if self.registers.f.carry { 1 } else { 0 }
+                    let value = self.memory.read(self.pc + 1) + if self.registers.f.carry { 1 } else { 0 };
+                    (value, self.pc.wrapping_add(2))
                 }
                 Register::HL => {
-                    self.memory.read(self.registers.get_16(&Register::HL))
-                        + if self.registers.f.carry { 1 } else { 0 }
+                    let value = self.memory.read(self.registers.get_16(&Register::HL))
+                        + if self.registers.f.carry { 1 } else { 0 };
+                    (value, self.pc.wrapping_add(1))
                 }
-                _ => self.registers.get(&from) + if self.registers.f.carry { 1 } else { 0 },
+                _ => {
+                    let value = self.registers.get(&from) + if self.registers.f.carry { 1 } else { 0 };
+                    (value, self.pc.wrapping_add(1))
+                }
             },
             _ => panic!("[CPU] Invalid instruction {:?}", instruction),
         };
@@ -216,25 +225,31 @@ impl Cpu {
         self.registers.f.half_carry = (((a & 0xF) + (value & 0xF)) & 0x10) == 0x10;
         self.registers.f.carry = did_overflow;
         self.registers.set(&Register::A, result);
-        self.pc.wrapping_add(1)
+
+        pc
     }
 
     fn sub(&mut self, instruction: Instruction) -> u16 {
-        let value = match instruction {
+        let (value, pc) = match instruction {
             Instruction::Sub(from) => match &from {
-                Register::D8 => self.memory.read(self.pc + 1),
-                Register::HL => self.memory.read(self.registers.get_16(&Register::HL)),
-                _ => self.registers.get(&from),
+                Register::D8 => (self.memory.read(self.pc + 1), self.pc.wrapping_add(2)),
+                Register::HL => (self.memory.read(self.registers.get_16(&Register::HL)), self.pc.wrapping_add(1)),
+                _ => (self.registers.get(&from), self.pc.wrapping_add(1)),
             },
             Instruction::Sbc(from) => match &from {
                 Register::D8 => {
-                    self.memory.read(self.pc + 1) + if self.registers.f.carry { 1 } else { 0 }
+                    let value = self.memory.read(self.pc + 1) + if self.registers.f.carry { 1 } else { 0 };
+                    (value, self.pc.wrapping_add(2))
                 }
                 Register::HL => {
-                    self.memory.read(self.registers.get_16(&Register::HL))
-                        + if self.registers.f.carry { 1 } else { 0 }
+                    let value = self.memory.read(self.registers.get_16(&Register::HL))
+                        + if self.registers.f.carry { 1 } else { 0 };
+                    (value, self.pc.wrapping_add(1))
                 }
-                _ => self.registers.get(&from) + if self.registers.f.carry { 1 } else { 0 },
+                _ => {
+                    let value = self.registers.get(&from) + if self.registers.f.carry { 1 } else { 0 };
+                    (value, self.pc.wrapping_add(1))
+                }
             },
             _ => panic!("[CPU] Invalid instruction {:?}", instruction),
         };
@@ -248,7 +263,7 @@ impl Cpu {
         self.registers.f.carry = did_overflow;
         self.registers.set(&Register::A, result);
 
-        self.pc.wrapping_add(1)
+        pc
     }
 
     fn push(&mut self, register: Register) -> u16 {
