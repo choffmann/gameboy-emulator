@@ -17,6 +17,12 @@ pub enum Instruction {
     Adc(Register),            // Add register to A with carry
     Sub(Register),            // Subtract register from A
     Sbc(Register),            // Subtract register from A with carry
+    And(Register),            // Logical AND register with A
+    Or(Register),             // Logical OR register with A
+    Xor(Register),            // Logical XOR register with A
+    Cp(Register),             // Compare register with A
+    Inc(Register),            // Increment register
+    Dec(Register),            // Decrement register
 }
 
 impl Instruction {
@@ -194,6 +200,64 @@ impl Instruction {
             0x9D => Some(Instruction::Sbc(Register::L)),
             0x9E => Some(Instruction::Sbc(Register::HL)),
             0xDE => Some(Instruction::Sbc(Register::D8)),
+
+            0xA7 => Some(Instruction::And(Register::A)),
+            0xA0 => Some(Instruction::And(Register::B)),
+            0xA1 => Some(Instruction::And(Register::C)),
+            0xA2 => Some(Instruction::And(Register::D)),
+            0xA3 => Some(Instruction::And(Register::E)),
+            0xA4 => Some(Instruction::And(Register::H)),
+            0xA5 => Some(Instruction::And(Register::L)),
+            0xA6 => Some(Instruction::And(Register::HL)),
+            0xE6 => Some(Instruction::And(Register::D8)),
+
+            0xB7 => Some(Instruction::Or(Register::A)),
+            0xB0 => Some(Instruction::Or(Register::B)),
+            0xB1 => Some(Instruction::Or(Register::C)),
+            0xB2 => Some(Instruction::Or(Register::D)),
+            0xB3 => Some(Instruction::Or(Register::E)),
+            0xB4 => Some(Instruction::Or(Register::H)),
+            0xB5 => Some(Instruction::Or(Register::L)),
+            0xB6 => Some(Instruction::Or(Register::HL)),
+            0xF6 => Some(Instruction::Or(Register::D8)),
+
+            0xAF => Some(Instruction::Xor(Register::A)),
+            0xA8 => Some(Instruction::Xor(Register::B)),
+            0xA9 => Some(Instruction::Xor(Register::C)),
+            0xAA => Some(Instruction::Xor(Register::D)),
+            0xAB => Some(Instruction::Xor(Register::E)),
+            0xAC => Some(Instruction::Xor(Register::H)),
+            0xAD => Some(Instruction::Xor(Register::L)),
+            0xAE => Some(Instruction::Xor(Register::HL)),
+            0xEE => Some(Instruction::Xor(Register::D8)),
+
+            0xBF => Some(Instruction::Cp(Register::A)),
+            0xB8 => Some(Instruction::Cp(Register::B)),
+            0xB9 => Some(Instruction::Cp(Register::C)),
+            0xBA => Some(Instruction::Cp(Register::D)),
+            0xBB => Some(Instruction::Cp(Register::E)),
+            0xBC => Some(Instruction::Cp(Register::H)),
+            0xBD => Some(Instruction::Cp(Register::L)),
+            0xBE => Some(Instruction::Cp(Register::HL)),
+            0xFE => Some(Instruction::Cp(Register::D8)),
+
+            0x3C => Some(Instruction::Inc(Register::A)),
+            0x04 => Some(Instruction::Inc(Register::B)),
+            0x0C => Some(Instruction::Inc(Register::C)),
+            0x14 => Some(Instruction::Inc(Register::D)),
+            0x1C => Some(Instruction::Inc(Register::E)),
+            0x24 => Some(Instruction::Inc(Register::H)),
+            0x2C => Some(Instruction::Inc(Register::L)),
+            0x34 => Some(Instruction::Inc(Register::HL)),
+
+            0x3D => Some(Instruction::Dec(Register::A)),
+            0x05 => Some(Instruction::Dec(Register::B)),
+            0x0D => Some(Instruction::Dec(Register::C)),
+            0x15 => Some(Instruction::Dec(Register::D)),
+            0x1D => Some(Instruction::Dec(Register::E)),
+            0x25 => Some(Instruction::Dec(Register::H)),
+            0x2D => Some(Instruction::Dec(Register::L)),
+            0x35 => Some(Instruction::Dec(Register::HL)),
 
             _ => None,
         }
