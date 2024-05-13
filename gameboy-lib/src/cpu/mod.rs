@@ -48,6 +48,13 @@ impl Cpu {
         match instruction {
             Instruction::Nop => self.pc.wrapping_add(1),
             Instruction::Ld8(_, _) => self.load_8(instruction),
+            Instruction::Ld16(_, _) => self.load_16(instruction),
+            Instruction::LdCa
+            | Instruction::LdAc
+            | Instruction::LdNa
+            | Instruction::LdAn
+            | Instruction::LdHi
+            | Instruction::LdHd => self.load_special(instruction),
             _ => panic!("[CPU] Not implementet {:?}", instruction),
         }
     }
@@ -57,14 +64,14 @@ impl Cpu {
             Instruction::Ld8(to, from) => match (&to, &from) {
                 (Register::BC | Register::DE | Register::HL | Register::AF, Register::D8) => {
                     let value = self.memory.read(self.pc + 1);
-                    let address = self.registers.get_16(to);
+                    let address = self.registers.get_16(&to);
                     self.memory.write(address, value);
 
                     self.pc.wrapping_add(2)
                 }
                 (Register::BC | Register::DE | Register::HL | Register::AF, from) => {
                     let value = self.registers.get(from);
-                    let address = self.registers.get_16(to);
+                    let address = self.registers.get_16(&to);
                     self.memory.write(address, value);
 
                     self.pc.wrapping_add(1)
@@ -77,7 +84,7 @@ impl Cpu {
                     self.pc.wrapping_add(3)
                 }
                 (to, Register::HL | Register::BC | Register::DE | Register::AF) => {
-                    let address = self.registers.get_16(from);
+                    let address = self.registers.get_16(&from);
                     let value = self.memory.read(address);
                     self.registers.set(to, value);
 
@@ -103,6 +110,99 @@ impl Cpu {
                     self.pc.wrapping_add(1)
                 }
             },
+            _ => panic!("[CPU] Invalid instruction {:?}", instruction),
+        }
+    }
+
+    fn load_16(&mut self, instruction: Instruction) -> u16 {
+        match instruction {
+            Instruction::Ld16(to, from) => match (&to, &from) {
+                (Register::SP, Register::HL) => {
+                    let value = self.registers.get_16(&Register::HL);
+                    self.registers.sp.set(value);
+
+                    self.pc.wrapping_add(1)
+                }
+                (Register::SP, Register::D8) => {
+                    let n = self.memory.read(self.pc + 1) as u16;
+                    let address = self.registers.sp.get().wrapping_add(n);
+                    println!("[CPU] SP: 0x{:x} + 0x{:x} = 0x{:x}", self.registers.sp.get(), n, address);
+                    self.registers.set_16(&Register::HL, address);
+
+                    self.registers.f.zero = false;
+                    self.registers.f.subtract = false;
+                    self.registers.f.half_carry = (self.registers.sp.get() & 0xF) + (n & 0xF) > 0xF;
+                    self.registers.f.carry = (self.registers.sp.get() & 0xFF) + (n & 0xFF) > 0xFF;
+
+                    self.pc.wrapping_add(3)
+                }
+                (Register::D16, Register::SP) => {
+                    let address = self.memory.read_16(self.pc + 1);
+                    self.registers.sp.set(address);
+
+                    self.pc.wrapping_add(3)
+                }
+                (Register::BC | Register::DE | Register::HL | Register::SP, Register::D16) => {
+                    let value = self.memory.read_16(self.pc + 1);
+                    self.registers.set_16(&to, value);
+
+                    self.pc.wrapping_add(3)
+                }
+                (to, from) => {
+                    let value = self.registers.get_16(from);
+                    self.registers.set_16(to, value);
+
+                    self.pc.wrapping_add(1)
+                }
+            },
+            _ => panic!("[CPU] Invalid instruction {:?}", instruction),
+        }
+    }
+
+    fn load_special(&mut self, instruction: Instruction) -> u16 {
+        match instruction {
+            Instruction::LdCa => {
+                let address = 0xFF00 + self.registers.get(&Register::C) as u16;
+                let value = self.registers.get(&Register::A);
+                self.memory.write(address, value);
+
+                self.pc.wrapping_add(1)
+            }
+            Instruction::LdAc => {
+                let address = 0xFF00 + self.registers.get(&Register::C) as u16;
+                let value = self.memory.read(address);
+                self.registers.set(&Register::A, value);
+
+                self.pc.wrapping_add(1)
+            }
+            Instruction::LdNa => {
+                let address = 0xFF00 + self.memory.read(self.pc + 1) as u16;
+                let value = self.registers.get(&Register::A);
+                self.memory.write(address, value);
+
+                self.pc.wrapping_add(2)
+            }
+            Instruction::LdAn => {
+                let address = 0xFF00 + self.memory.read(self.pc + 1) as u16;
+                let value = self.memory.read(address);
+                self.registers.set(&Register::A, value);
+
+                self.pc.wrapping_add(2)
+            }
+            Instruction::LdHi => {
+                let address = self.registers.get_16(&Register::HL) + 1;
+                let value = self.registers.get(&Register::A);
+                self.memory.write(address, value);
+
+                self.pc.wrapping_add(1)
+            }
+            Instruction::LdHd => {
+                let address = self.registers.get_16(&Register::HL) - 1;
+                let value = self.registers.get(&Register::A);
+                self.memory.write(address, value);
+
+                self.pc.wrapping_add(1)
+            }
             _ => panic!("[CPU] Invalid instruction {:?}", instruction),
         }
     }
@@ -386,5 +486,124 @@ mod tests {
         cpu.registers.set(&Register::A, 0x4B);
         cpu.step();
         assert_eq!(cpu.memory.read(0xABCD), 0x4B);
+    }
+
+    #[test]
+    fn execute_ldac() {
+        let mut cpu = Cpu::new();
+        cpu.registers.set(&Register::A, 0x00);
+        cpu.registers.set(&Register::C, 0x42);
+        cpu.memory.write(0xFF42, 0x69);
+
+        cpu.boot(vec![0xF2]);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0x69);
+    }
+
+    #[test]
+    fn execute_ldca() {
+        let mut cpu = Cpu::new();
+        cpu.registers.set(&Register::A, 0x69);
+        cpu.registers.set(&Register::C, 0x42);
+
+        cpu.boot(vec![0xE2]);
+        cpu.step();
+        assert_eq!(cpu.memory.read(0xFF42), 0x69);
+    }
+
+    #[test]
+    fn execute_ldna() {
+        let mut cpu = Cpu::new();
+        cpu.registers.set(&Register::A, 0x69);
+        cpu.memory.write(0xFF42, 0x00);
+
+        cpu.boot(vec![0xE0, 0x42]);
+        cpu.step();
+        assert_eq!(cpu.memory.read(0xFF42), 0x69);
+    }
+
+    #[test]
+    fn execute_ldan() {
+        let mut cpu = Cpu::new();
+        cpu.registers.set(&Register::A, 0x00);
+        cpu.memory.write(0xFF42, 0x69);
+
+        cpu.boot(vec![0xF0, 0x42]);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0x69);
+    }
+
+    #[test]
+    fn execute_ldhi() {
+        let mut cpu = Cpu::new();
+        cpu.registers.set(&Register::A, 0x69);
+        cpu.registers.set_16(&Register::HL, 0x1234);
+        cpu.memory.write(0x1235, 0x00);
+
+        cpu.boot(vec![0x22]);
+        cpu.step();
+        assert_eq!(cpu.memory.read(0x1235), 0x69);
+    }
+
+    #[test]
+    fn execute_ldhd() {
+        let mut cpu = Cpu::new();
+        cpu.registers.set(&Register::A, 0x69);
+        cpu.registers.set_16(&Register::HL, 0x1234);
+        cpu.memory.write(0x1233, 0x00);
+
+        cpu.boot(vec![0x32]);
+        cpu.step();
+        assert_eq!(cpu.memory.read(0x1233), 0x69);
+    }
+
+    #[test]
+    fn execute_ld16() {
+        let mut cpu = Cpu::new();
+        cpu.registers.set_16(&Register::BC, 0x0000);
+        cpu.registers.set_16(&Register::DE, 0x0000);
+        cpu.registers.set_16(&Register::HL, 0x0000);
+        cpu.registers.sp.set(0x0000);
+
+        cpu.boot(vec![
+            0x01, 0x34, 0x12, 0x11, 0x56, 0x34, 0x21, 0x78, 0x56, 0x31, 0xCD, 0xAB,
+        ]);
+        cpu.step();
+        assert_eq!(cpu.registers.get_16(&Register::BC), 0x1234);
+        cpu.step();
+        assert_eq!(cpu.registers.get_16(&Register::DE), 0x3456);
+        cpu.step();
+        assert_eq!(cpu.registers.get_16(&Register::HL), 0x5678);
+        cpu.step();
+        assert_eq!(cpu.registers.sp.get(), 0xABCD);
+    }
+
+    #[test]
+    fn execute_ld16_sp() {
+        let mut cpu = Cpu::new();
+        cpu.registers.set_16(&Register::HL, 0xFF69);
+        cpu.registers.sp.set(0x0000);
+
+        cpu.boot(vec![0xF9, 0xF8, 0xFF]);
+        cpu.step();
+        assert_eq!(cpu.registers.sp.get(), 0xFF69);
+        cpu.step();
+
+        // test half carry true and carry true
+        assert_eq!(cpu.registers.get_16(&Register::HL), 0x68);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, true);
+        assert_eq!(cpu.registers.f.carry, true);
+
+        // test half carry true and carry false
+        cpu.registers.sp.set(0x0F);
+        cpu.boot(vec![0xF8, 0x01]);
+        cpu.step();
+        assert_eq!(cpu.registers.get_16(&Register::HL), 0x10);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, true);
+        assert_eq!(cpu.registers.f.carry, false);
     }
 }

@@ -63,7 +63,7 @@ impl Registers {
         }
     }
 
-    pub fn get_16(&self, register: Register) -> u16 {
+    pub fn get_16(&self, register: &Register) -> u16 {
         match register {
             Register::AF => self.get_af(),
             Register::BC => self.get_bc(),
@@ -176,11 +176,11 @@ mod tests {
         registers.set_hl(0x0708);
         registers.sp.set(0x090A);
 
-        assert_eq!(registers.get_16(Register::AF), 0x0102);
-        assert_eq!(registers.get_16(Register::BC), 0x0304);
-        assert_eq!(registers.get_16(Register::DE), 0x0506);
-        assert_eq!(registers.get_16(Register::HL), 0x0708);
-        assert_eq!(registers.get_16(Register::SP), 0x090A);
+        assert_eq!(registers.get_16(&Register::AF), 0x0102);
+        assert_eq!(registers.get_16(&Register::BC), 0x0304);
+        assert_eq!(registers.get_16(&Register::DE), 0x0506);
+        assert_eq!(registers.get_16(&Register::HL), 0x0708);
+        assert_eq!(registers.get_16(&Register::SP), 0x090A);
     }
 
     #[test]

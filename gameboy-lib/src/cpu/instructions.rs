@@ -135,6 +135,10 @@ impl Instruction {
             0x21 => Some(Instruction::Ld16(Register::HL, Register::D16)),
             0x31 => Some(Instruction::Ld16(Register::SP, Register::D16)),
 
+            0xF9 => Some(Instruction::Ld16(Register::SP, Register::HL)),
+            0xF8 => Some(Instruction::Ld16(Register::SP, Register::D8)),
+            0x08 => Some(Instruction::Ld16(Register::D16, Register::SP)),
+
             _ => None,
         }
     }
