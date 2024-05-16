@@ -27,6 +27,8 @@ pub enum Instruction {
     Inc16(Register),          // Increment register
     Dec(Register),            // Decrement register
     Dec16(Register),          // Decrement register
+
+    Swap(Register),           // Swap upper and lower nibbles of register
 }
 
 impl Instruction {
@@ -40,6 +42,15 @@ impl Instruction {
 
     fn from_byte_with_prefix(byte: u8) -> Option<Instruction> {
         match byte {
+            0x37 => Some(Instruction::Swap(Register::A)),
+            0x30 => Some(Instruction::Swap(Register::B)),
+            0x31 => Some(Instruction::Swap(Register::C)),
+            0x32 => Some(Instruction::Swap(Register::D)),
+            0x33 => Some(Instruction::Swap(Register::E)),
+            0x34 => Some(Instruction::Swap(Register::H)),
+            0x35 => Some(Instruction::Swap(Register::L)),
+            0x36 => Some(Instruction::Swap(Register::HL)),
+
             _ => None,
         }
     }
