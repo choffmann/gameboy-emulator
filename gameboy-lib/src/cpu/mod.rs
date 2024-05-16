@@ -101,13 +101,16 @@ impl Cpu {
             Instruction::Push(register) => self.push(register),
             Instruction::Pop(register) => self.pop(register),
             Instruction::Add(_) | Instruction::Adc(_) => self.add(instruction),
+            Instruction::Add16(_) | Instruction::Add16SP => self.add16(instruction),
             Instruction::Sub(_) | Instruction::Sbc(_) => self.sub(instruction),
             Instruction::And(_) => self.and(instruction),
             Instruction::Or(_) => self.or(instruction),
             Instruction::Xor(_) => self.xor(instruction),
             Instruction::Cp(_) => self.compare(instruction),
             Instruction::Inc(register) => self.inc(register),
+            Instruction::Inc16(register) => self.inc16(register),
             Instruction::Dec(register) => self.dec(register),
+            Instruction::Dec16(register) => self.dec16(register),
             _ => panic!("[CPU] Not implementet {:?}", instruction),
         }
     }
@@ -129,16 +132,19 @@ impl Cpu {
         }
     }
 
-    fn alu_operation16<F>(&mut self, instruction: Instruction, op: F) -> u16
+    fn alu_operation16<F>(&mut self, instruction: &Instruction, op: F) -> u16
     where
         F: Fn(u16, u16) -> (u16, Vec<FlagUpdate>),
     {
         let (value, pc) = match instruction {
+            Instruction::Add16(from) => {
+                let value = self.registers.get_16(&from);
+                (value, self.pc.wrapping_add(1))
+            }
             Instruction::Add16SP => {
-                let n = self.memory.read(self.pc + 1) as i8 as i16;
-                let sp = self.registers.sp.get() as i16;
+                let n = self.memory.read(self.pc + 1) as u16;
+                let sp = self.registers.get_16(&Register::SP);
                 let result = sp.wrapping_add(n);
-                let did_overflow = ((sp & 0xFF) + (n & 0xFF) & 0x100) == 0x100;
                 (result as u16, self.pc.wrapping_add(2))
             }
             _ => panic!("[CPU] Invalid instruction {:?}", instruction),
@@ -146,7 +152,12 @@ impl Cpu {
 
         let hl = self.registers.get_16(&Register::HL);
         let (result, flag_update) = op(hl, value);
-        self.registers.set_16(&Register::HL, result);
+
+        if let Instruction::Add16SP = instruction {
+            self.registers.set_16(&Register::SP, value)
+        } else {
+            self.registers.set_16(&Register::HL, result);
+        }
 
         for flag in flag_update {
             self.update_flag(flag);
@@ -260,10 +271,19 @@ impl Cpu {
         self.registers.f.half_carry = (value & 0xF) == 0xF;
 
         if let Register::HL = register {
-            self.memory.write(self.registers.get_16(&Register::HL), result);
+            self.memory
+                .write(self.registers.get_16(&Register::HL), result);
         } else {
             self.registers.set(&register, result);
         }
+
+        self.pc.wrapping_add(1)
+    }
+
+    fn inc16(&mut self, register: Register) -> u16 {
+        let value = self.registers.get_16(&register);
+        let result = value.wrapping_add(1);
+        self.registers.set_16(&register, result);
 
         self.pc.wrapping_add(1)
     }
@@ -281,10 +301,19 @@ impl Cpu {
         self.registers.f.half_carry = (value & 0xF) == 0x0;
 
         if let Register::HL = register {
-            self.memory.write(self.registers.get_16(&Register::HL), result);
+            self.memory
+                .write(self.registers.get_16(&Register::HL), result);
         } else {
             self.registers.set(&register, result);
         }
+
+        self.pc.wrapping_add(1)
+    }
+
+    fn dec16(&mut self, register: Register) -> u16 {
+        let value = self.registers.get_16(&register);
+        let result = value.wrapping_sub(1);
+        self.registers.set_16(&register, result);
 
         self.pc.wrapping_add(1)
     }
@@ -298,6 +327,21 @@ impl Cpu {
                     FlagUpdate::Zero(result == 0),
                     FlagUpdate::Subtract(false),
                     FlagUpdate::HalfCarry(((a & 0x0F) + (b & 0x0F)) & 0x10 == 0x10),
+                    FlagUpdate::Carry(did_overflow),
+                ],
+            )
+        })
+    }
+
+    fn add16(&mut self, instruction: Instruction) -> u16 {
+        self.alu_operation16(&instruction, |a, b| {
+            let (result, did_overflow) = a.overflowing_add(b);
+            (
+                result,
+                vec![
+                    FlagUpdate::Zero(false),
+                    FlagUpdate::Subtract(false),
+                    FlagUpdate::HalfCarry(((a & 0x0FFF) + (b & 0x0FFF)) & 0x1000 == 0x1000),
                     FlagUpdate::Carry(did_overflow),
                 ],
             )
@@ -1576,9 +1620,7 @@ mod tests {
         cpu.registers.set(&Register::L, 0b11111110);
         cpu.memory.write(0x00FF, 0b10101010);
 
-        cpu.boot(vec![
-            0x3C, 0x04, 0x0C, 0x14, 0x1C, 0x24, 0x2C, 0x34
-        ]);
+        cpu.boot(vec![0x3C, 0x04, 0x0C, 0x14, 0x1C, 0x24, 0x2C, 0x34]);
 
         // Inc A
         cpu.step();
@@ -1650,9 +1692,7 @@ mod tests {
         cpu.registers.set(&Register::L, 0b11111110);
         cpu.memory.write(0x00FF, 0b10101010);
 
-        cpu.boot(vec![
-            0x3D, 0x05, 0x0D, 0x15, 0x1D, 0x25, 0x2D, 0x35
-        ]);
+        cpu.boot(vec![0x3D, 0x05, 0x0D, 0x15, 0x1D, 0x25, 0x2D, 0x35]);
 
         // Dec A
         cpu.step();
@@ -1702,5 +1742,146 @@ mod tests {
         assert_eq!(cpu.registers.f.zero, false);
         assert_eq!(cpu.registers.f.subtract, true);
         assert_eq!(cpu.registers.f.half_carry, false);
+    }
+
+    #[test]
+    fn execute_add_16() {
+        let mut cpu = Cpu::new();
+        cpu.registers.set_16(&Register::BC, 0x1234);
+        cpu.registers.set_16(&Register::DE, 0x5678);
+        cpu.registers.set_16(&Register::HL, 0x9ABC);
+        cpu.registers.set_16(&Register::SP, 0x0000);
+
+        cpu.boot(vec![0x09, 0x19, 0x29, 0x39]);
+
+        // Add HL, BC
+        cpu.registers.set_16(&Register::HL, 0x9ABC);
+        cpu.step();
+        assert_eq!(cpu.registers.get_16(&Register::HL), 0x1234 + 0x9ABC);
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, false);
+        assert_eq!(cpu.registers.f.carry, false);
+
+        // Add HL, DE
+        cpu.registers.set_16(&Register::HL, 0x9ABC);
+        cpu.step();
+        assert_eq!(cpu.registers.get_16(&Register::HL), 0x9ABC + 0x5678);
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, true);
+        assert_eq!(cpu.registers.f.carry, false);
+
+        // Add HL, HL
+        cpu.registers.set_16(&Register::HL, 0x9ABC);
+        cpu.step();
+        assert_eq!(cpu.registers.get_16(&Register::HL), 0x09ABC_u16.wrapping_add(0x9ABC));
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, true);
+        assert_eq!(cpu.registers.f.carry, true);
+
+        // Add HL, SP
+        cpu.registers.set_16(&Register::HL, 0x9ABC);
+        cpu.step();
+        assert_eq!(cpu.registers.get_16(&Register::HL), 0x9ABC + 0x0000);
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, false);
+        assert_eq!(cpu.registers.f.carry, false);
+    }
+
+    #[test]
+    fn execute_add_sp() {
+        let default_sp = 0x1234_u16;
+        let mut cpu = Cpu::new();
+
+        cpu.boot(vec![0xE8, 0x00, 0xE8, 0x01, 0xE8, 0x02, 0xE8, 0xFF]);
+
+        // Add SP, 0x00
+        cpu.registers.set_16(&Register::SP, default_sp.clone());
+        cpu.step();
+        assert_eq!(cpu.registers.get_16(&Register::SP), default_sp.wrapping_add(0x00));
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, false);
+        assert_eq!(cpu.registers.f.carry, false);
+
+        // Add SP, 0x01
+        cpu.registers.set_16(&Register::SP, default_sp.clone());
+        cpu.step();
+        assert_eq!(cpu.registers.get_16(&Register::SP), default_sp.wrapping_add(0x01));
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, false);
+        assert_eq!(cpu.registers.f.carry, false);
+
+        // Add SP, 0x02
+        cpu.registers.set_16(&Register::SP, default_sp.clone());
+        cpu.step();
+        assert_eq!(cpu.registers.get_16(&Register::SP), default_sp.wrapping_add(0x02));
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, false);
+        assert_eq!(cpu.registers.f.carry, false);
+
+        // Add SP, 0xFF
+        cpu.registers.set_16(&Register::SP, default_sp.clone());
+        cpu.step();
+        assert_eq!(cpu.registers.get_16(&Register::SP), default_sp.wrapping_add(0xFF));
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, false);
+        assert_eq!(cpu.registers.f.carry, false);
+    }
+
+    #[test]
+    fn execute_inc16() {
+        let mut cpu = Cpu::new();
+        cpu.registers.set_16(&Register::BC, 0x1234);
+        cpu.registers.set_16(&Register::DE, 0x5678);
+        cpu.registers.set_16(&Register::HL, 0x9ABC);
+        cpu.registers.set_16(&Register::SP, 0x0000);
+
+        cpu.boot(vec![0x03, 0x13, 0x23, 0x33]);
+
+        // Inc BC
+        cpu.step();
+        assert_eq!(cpu.registers.get_16(&Register::BC), 0x1234 + 1);
+
+        // Inc DE
+        cpu.step();
+        assert_eq!(cpu.registers.get_16(&Register::DE), 0x5678 + 1);
+
+        // Inc HL
+        cpu.step();
+        assert_eq!(cpu.registers.get_16(&Register::HL), 0x9ABC + 1);
+
+        // Inc SP
+        cpu.step();
+        assert_eq!(cpu.registers.get_16(&Register::SP), 0x0000 + 1);
+    }
+
+    #[test]
+    fn execute_dec16() {
+        let mut cpu = Cpu::new();
+        cpu.registers.set_16(&Register::BC, 0x1234);
+        cpu.registers.set_16(&Register::DE, 0x5678);
+        cpu.registers.set_16(&Register::HL, 0x9ABC);
+        cpu.registers.set_16(&Register::SP, 0x0000);
+
+        cpu.boot(vec![0x0B, 0x1B, 0x2B, 0x3B]);
+
+        // Dec BC
+        cpu.step();
+        assert_eq!(cpu.registers.get_16(&Register::BC), 0x1234 - 1);
+
+        // Dec DE
+        cpu.step();
+        assert_eq!(cpu.registers.get_16(&Register::DE), 0x5678 - 1);
+
+        // Dec HL
+        cpu.step();
+        assert_eq!(cpu.registers.get_16(&Register::HL), 0x9ABC - 1);
+
+        // Dec SP
+        cpu.step();
+        assert_eq!(cpu.registers.get_16(&Register::SP), 0x0000_u16.wrapping_sub(1));
     }
 }
