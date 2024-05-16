@@ -21,8 +21,23 @@ impl Cpu {
     }
 
     pub fn boot(&mut self, boot_rom: Vec<u8>) {
+        self.memory.write_vec(0x0, boot_rom);
+    }
+
+    pub fn run(&mut self) {
+        // Boot Sequence
+        self.pc = 0x0;
+        for _ in 0..0xFF {
+            self.step();
+        }
+
+        // Program Counter default value
         self.pc = 0x100;
-        self.memory.write_vec(0x100, boot_rom);
+
+        // TODO: Add timing
+        loop {
+            self.step();
+        }
     }
 
     pub fn step(&mut self) {
@@ -49,6 +64,14 @@ impl Cpu {
     }
 
     fn execute(&mut self, instruction: Instruction, prefixed: bool) -> u16 {
+        if prefixed {
+            self.execute_prefixed(instruction)
+        } else {
+            self.execute_unprefixed(instruction)
+        }
+    }
+
+    fn execute_unprefixed(&mut self, instruction: Instruction) -> u16 {
         match instruction {
             Instruction::Nop => self.pc.wrapping_add(1),
             Instruction::Ld8(_, _) => self.load_8(instruction),
@@ -73,11 +96,20 @@ impl Cpu {
         }
     }
 
+    fn execute_prefixed(&mut self, instruction: Instruction) -> u16 {
+        match instruction {
+            _ => panic!("[CPU] Not implementet {:?}", instruction),
+        }
+    }
+
     fn and(&mut self, instruction: Instruction) -> u16 {
         let (value, pc) = match instruction {
             Instruction::And(from) => match &from {
                 Register::D8 => (self.memory.read(self.pc + 1), self.pc.wrapping_add(2)),
-                Register::HL => (self.memory.read(self.registers.get_16(&Register::HL)), self.pc.wrapping_add(1)),
+                Register::HL => (
+                    self.memory.read(self.registers.get_16(&Register::HL)),
+                    self.pc.wrapping_add(1),
+                ),
                 _ => (self.registers.get(&from), self.pc.wrapping_add(1)),
             },
             _ => panic!("[CPU] Invalid instruction {:?}", instruction),
@@ -99,7 +131,10 @@ impl Cpu {
         let (value, pc) = match instruction {
             Instruction::Or(from) => match &from {
                 Register::D8 => (self.memory.read(self.pc + 1), self.pc.wrapping_add(2)),
-                Register::HL => (self.memory.read(self.registers.get_16(&Register::HL)), self.pc.wrapping_add(1)),
+                Register::HL => (
+                    self.memory.read(self.registers.get_16(&Register::HL)),
+                    self.pc.wrapping_add(1),
+                ),
                 _ => (self.registers.get(&from), self.pc.wrapping_add(1)),
             },
             _ => panic!("[CPU] Invalid instruction {:?}", instruction),
@@ -121,7 +156,10 @@ impl Cpu {
         let (value, pc) = match instruction {
             Instruction::Xor(from) => match &from {
                 Register::D8 => (self.memory.read(self.pc + 1), self.pc.wrapping_add(2)),
-                Register::HL => (self.memory.read(self.registers.get_16(&Register::HL)), self.pc.wrapping_add(1)),
+                Register::HL => (
+                    self.memory.read(self.registers.get_16(&Register::HL)),
+                    self.pc.wrapping_add(1),
+                ),
                 _ => (self.registers.get(&from), self.pc.wrapping_add(1)),
             },
             _ => panic!("[CPU] Invalid instruction {:?}", instruction),
@@ -143,7 +181,10 @@ impl Cpu {
         let (value, pc) = match instruction {
             Instruction::Cp(from) => match &from {
                 Register::D8 => (self.memory.read(self.pc + 1), self.pc.wrapping_add(2)),
-                Register::HL => (self.memory.read(self.registers.get_16(&Register::HL)), self.pc.wrapping_add(1)),
+                Register::HL => (
+                    self.memory.read(self.registers.get_16(&Register::HL)),
+                    self.pc.wrapping_add(1),
+                ),
                 _ => (self.registers.get(&from), self.pc.wrapping_add(1)),
             },
             _ => panic!("[CPU] Invalid instruction {:?}", instruction),
@@ -196,12 +237,16 @@ impl Cpu {
         let (value, pc) = match instruction {
             Instruction::Add(from) => match &from {
                 Register::D8 => (self.memory.read(self.pc + 1), self.pc.wrapping_add(2)),
-                Register::HL => (self.memory.read(self.registers.get_16(&Register::HL)), self.pc.wrapping_add(1)),
+                Register::HL => (
+                    self.memory.read(self.registers.get_16(&Register::HL)),
+                    self.pc.wrapping_add(1),
+                ),
                 _ => (self.registers.get(&from), self.pc.wrapping_add(1)),
             },
             Instruction::Adc(from) => match &from {
                 Register::D8 => {
-                    let value = self.memory.read(self.pc + 1) + if self.registers.f.carry { 1 } else { 0 };
+                    let value =
+                        self.memory.read(self.pc + 1) + if self.registers.f.carry { 1 } else { 0 };
                     (value, self.pc.wrapping_add(2))
                 }
                 Register::HL => {
@@ -210,7 +255,8 @@ impl Cpu {
                     (value, self.pc.wrapping_add(1))
                 }
                 _ => {
-                    let value = self.registers.get(&from) + if self.registers.f.carry { 1 } else { 0 };
+                    let value =
+                        self.registers.get(&from) + if self.registers.f.carry { 1 } else { 0 };
                     (value, self.pc.wrapping_add(1))
                 }
             },
@@ -233,12 +279,16 @@ impl Cpu {
         let (value, pc) = match instruction {
             Instruction::Sub(from) => match &from {
                 Register::D8 => (self.memory.read(self.pc + 1), self.pc.wrapping_add(2)),
-                Register::HL => (self.memory.read(self.registers.get_16(&Register::HL)), self.pc.wrapping_add(1)),
+                Register::HL => (
+                    self.memory.read(self.registers.get_16(&Register::HL)),
+                    self.pc.wrapping_add(1),
+                ),
                 _ => (self.registers.get(&from), self.pc.wrapping_add(1)),
             },
             Instruction::Sbc(from) => match &from {
                 Register::D8 => {
-                    let value = self.memory.read(self.pc + 1) + if self.registers.f.carry { 1 } else { 0 };
+                    let value =
+                        self.memory.read(self.pc + 1) + if self.registers.f.carry { 1 } else { 0 };
                     (value, self.pc.wrapping_add(2))
                 }
                 Register::HL => {
@@ -247,7 +297,8 @@ impl Cpu {
                     (value, self.pc.wrapping_add(1))
                 }
                 _ => {
-                    let value = self.registers.get(&from) + if self.registers.f.carry { 1 } else { 0 };
+                    let value =
+                        self.registers.get(&from) + if self.registers.f.carry { 1 } else { 0 };
                     (value, self.pc.wrapping_add(1))
                 }
             },
@@ -352,7 +403,7 @@ impl Cpu {
                 }
                 (Register::SP, Register::D8) => {
                     let n = self.memory.read(self.pc + 1) as u16;
-                    let address = self.registers.sp.get().wrapping_add(n);
+                    let (address, did_overflow) = self.registers.sp.get().overflowing_add(n);
                     println!(
                         "[CPU] SP: 0x{:x} + 0x{:x} = 0x{:x}",
                         self.registers.sp.get(),
@@ -363,8 +414,8 @@ impl Cpu {
 
                     self.registers.f.zero = false;
                     self.registers.f.subtract = false;
-                    self.registers.f.half_carry = (self.registers.sp.get() & 0xF) + (n & 0xF) > 0xF;
-                    self.registers.f.carry = (self.registers.sp.get() & 0xFF) + (n & 0xFF) > 0xFF;
+                    self.registers.f.half_carry = (((self.registers.sp.get() & 0xFFF) + (n & 0xFFF)) & 0x1000) == 0x1000;
+                    self.registers.f.carry = did_overflow;
 
                     self.pc.wrapping_add(3)
                 }
@@ -448,11 +499,10 @@ mod tests {
     fn boot() {
         let mut cpu = Cpu::new();
         cpu.boot(vec![0x00, 0x01, 0x02, 0x03]);
-        assert_eq!(cpu.pc, 0x100);
-        assert_eq!(cpu.memory.read(0x100), 0x00);
-        assert_eq!(cpu.memory.read(0x101), 0x01);
-        assert_eq!(cpu.memory.read(0x102), 0x02);
-        assert_eq!(cpu.memory.read(0x103), 0x03);
+        assert_eq!(cpu.memory.read(0x0), 0x00);
+        assert_eq!(cpu.memory.read(0x1), 0x01);
+        assert_eq!(cpu.memory.read(0x2), 0x02);
+        assert_eq!(cpu.memory.read(0x3), 0x03);
     }
 
     #[test]
@@ -460,13 +510,13 @@ mod tests {
         let mut cpu = Cpu::new();
         cpu.boot(vec![0x00, 0x00, 0x00, 0x00]);
         cpu.step();
-        assert_eq!(cpu.pc, 0x101);
+        assert_eq!(cpu.pc, 0x1);
         cpu.step();
-        assert_eq!(cpu.pc, 0x102);
+        assert_eq!(cpu.pc, 0x2);
         cpu.step();
-        assert_eq!(cpu.pc, 0x103);
+        assert_eq!(cpu.pc, 0x3);
         cpu.step();
-        assert_eq!(cpu.pc, 0x104);
+        assert_eq!(cpu.pc, 0x4);
     }
 
     #[test]
@@ -829,10 +879,11 @@ mod tests {
         assert_eq!(cpu.registers.f.carry, true);
 
         // test half carry true and carry false
-        cpu.registers.sp.set(0x0F);
+        cpu.registers.sp.set(0x0FFF);
+        cpu.pc = 0x00;
         cpu.boot(vec![0xF8, 0x01]);
         cpu.step();
-        assert_eq!(cpu.registers.get_16(&Register::HL), 0x10);
+        assert_eq!(cpu.registers.get_16(&Register::HL), 0x1000);
         assert_eq!(cpu.registers.f.zero, false);
         assert_eq!(cpu.registers.f.subtract, false);
         assert_eq!(cpu.registers.f.half_carry, true);
@@ -1212,6 +1263,159 @@ mod tests {
             0xA7, 0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xE6, 0b11001100,
         ]);
 
-        // TODO: Add tests for flags
+        // And A from A
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0b10101010);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, true);
+        assert_eq!(cpu.registers.f.carry, false);
+
+        // And A from B
+        // 10101010 & 11001100 = 10001000
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0b10001000);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, true);
+        assert_eq!(cpu.registers.f.carry, false);
+
+        // And A from C
+        // 10001000 & 11110000 = 10000000
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0b10000000);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, true);
+        assert_eq!(cpu.registers.f.carry, false);
+
+        // And A from D
+        // 10101010 & 00001111 = 00001010
+        cpu.registers.set(&Register::A, 0b10101010);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0b00001010);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, true);
+        assert_eq!(cpu.registers.f.carry, false);
+
+        // And A from E
+        // 00001010 & 11111111 = b00001010
+        cpu.registers.set(&Register::A, 0b00001010);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0b00001010);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, true);
+        assert_eq!(cpu.registers.f.carry, false);
+
+        // And A from H
+        // 00001010 & 10101010 = 00000000
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0b00000000);
+        assert_eq!(cpu.registers.f.zero, true);
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, true);
+        assert_eq!(cpu.registers.f.carry, false);
+
+        // And A from L
+        // 10110100 & 11111111 = 10110100
+        cpu.registers.set(&Register::A, 0b10110100);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0b10110100);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, true);
+        assert_eq!(cpu.registers.f.carry, false);
+
+        // And A (HL)
+        // 10110100 & 10101010 = 10100000
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0b10100000);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, true);
+        assert_eq!(cpu.registers.f.carry, false);
+
+        // And A from D8
+        // 10011111 & 11001100 = 10001100
+        cpu.registers.set(&Register::A, 0b10011111);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0b10001100);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, true);
+        assert_eq!(cpu.registers.f.carry, false);
+    }
+
+    #[test]
+    fn execute_or() {
+        let mut cpu = Cpu::new();
+        cpu.registers.set(&Register::A, 0b10101010);
+        cpu.registers.set(&Register::B, 0b11001100);
+        cpu.registers.set(&Register::C, 0b11110000);
+        cpu.registers.set(&Register::D, 0b00001111);
+        cpu.registers.set(&Register::E, 0b11111111);
+        cpu.registers.set(&Register::H, 0b00000000);
+        cpu.registers.set(&Register::L, 0b11111111);
+        cpu.memory.write(0x00FF, 0b10101010);
+
+        cpu.boot(vec![
+            0xB7, 0xB0, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xF6, 0b11001100,
+        ]);
+
+        // Or A from A
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0b10101010);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, false);
+        assert_eq!(cpu.registers.f.carry, false);
+
+        // Or A from B
+        // 10101010 | 11001100 = 11101110
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0b11101110);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, false);
+        assert_eq!(cpu.registers.f.carry, false);
+
+        // Or A from C
+        // 11101110 | 11110000 = 11111110
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0b11111110);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, false);
+        assert_eq!(cpu.registers.f.carry, false);
+
+        // Or A from D
+        // 11111110 | 00001111 = 11111111
+        cpu.registers.set(&Register::A, 0b11111110);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0b11111111);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, false);
+        assert_eq!(cpu.registers.f.carry, false);
+
+        // Or A from E
+        // 11111111 | 11111111 = 11111111
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0b11111111);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, false);
+        assert_eq!(cpu.registers.f.carry, false);
+
+        // Or A from H
+        // 11111111 | 00000000 = 11111111
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0b11111111);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, false);
+        assert_eq!(cpu.registers.f.carry, false);
     }
 }

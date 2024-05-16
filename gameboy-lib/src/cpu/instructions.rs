@@ -14,6 +14,8 @@ pub enum Instruction {
     Push(Register),           // Push register onto stack
     Pop(Register),            // Pop register from stack
     Add(Register),            // Add register to A
+    Add16(Register),          // Add register to HL
+    Add16SP,                  // Add SP to HL
     Adc(Register),            // Add register to A with carry
     Sub(Register),            // Subtract register from A
     Sbc(Register),            // Subtract register from A with carry
@@ -22,7 +24,9 @@ pub enum Instruction {
     Xor(Register),            // Logical XOR register with A
     Cp(Register),             // Compare register with A
     Inc(Register),            // Increment register
+    Inc16(Register),          // Increment register
     Dec(Register),            // Decrement register
+    Dec16(Register),          // Decrement register
 }
 
 impl Instruction {
@@ -258,6 +262,23 @@ impl Instruction {
             0x25 => Some(Instruction::Dec(Register::H)),
             0x2D => Some(Instruction::Dec(Register::L)),
             0x35 => Some(Instruction::Dec(Register::HL)),
+
+            0x09 => Some(Instruction::Add16(Register::BC)),
+            0x19 => Some(Instruction::Add16(Register::DE)),
+            0x29 => Some(Instruction::Add16(Register::HL)),
+            0x39 => Some(Instruction::Add16(Register::SP)),
+
+            0xE8 => Some(Instruction::Add16SP),
+
+            0x03 => Some(Instruction::Inc16(Register::BC)),
+            0x13 => Some(Instruction::Inc16(Register::DE)),
+            0x23 => Some(Instruction::Inc16(Register::HL)),
+            0x33 => Some(Instruction::Inc16(Register::SP)),
+
+            0x0B => Some(Instruction::Dec16(Register::BC)),
+            0x1B => Some(Instruction::Dec16(Register::DE)),
+            0x2B => Some(Instruction::Dec16(Register::HL)),
+            0x3B => Some(Instruction::Dec16(Register::SP)),
 
             _ => None,
         }
