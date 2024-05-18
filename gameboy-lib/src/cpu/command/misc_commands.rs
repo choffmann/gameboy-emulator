@@ -14,7 +14,7 @@ impl<'a> MiscCommand<'a> {
     }
 
     fn nop(&mut self) -> u16 {
-        self.cpu.pc.wrapping_add(0)
+        self.cpu.pc.wrapping_add(1)
     }
 
     fn swap(&mut self, from: &Register) -> u16 {

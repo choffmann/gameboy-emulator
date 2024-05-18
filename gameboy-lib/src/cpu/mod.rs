@@ -30,8 +30,9 @@ impl Cpu {
         }
     }
 
-    pub fn boot(&mut self, boot_rom: Vec<u8>) {
+    pub fn boot(&mut self, boot_rom: Vec<u8>, game_rom: Vec<u8>) {
         self.memory.write_vec(0x0, boot_rom);
+        self.memory.write_vec(0x100, game_rom);
     }
 
     pub fn run(&mut self) {
@@ -125,17 +126,22 @@ mod tests {
     #[test]
     fn boot() {
         let mut cpu = Cpu::new();
-        cpu.boot(vec![0x00, 0x01, 0x02, 0x03]);
+        cpu.boot(vec![0x00, 0x01, 0x02, 0x03], vec![0x00, 0x01, 0x02, 0x03]);
         assert_eq!(cpu.memory.read(0x0), 0x00);
         assert_eq!(cpu.memory.read(0x1), 0x01);
         assert_eq!(cpu.memory.read(0x2), 0x02);
         assert_eq!(cpu.memory.read(0x3), 0x03);
+
+        assert_eq!(cpu.memory.read(0x100), 0x00);
+        assert_eq!(cpu.memory.read(0x101), 0x01);
+        assert_eq!(cpu.memory.read(0x102), 0x02);
+        assert_eq!(cpu.memory.read(0x103), 0x03);
     }
 
     #[test]
     fn step() {
         let mut cpu = Cpu::new();
-        cpu.boot(vec![0x00, 0x00, 0x00, 0x00]);
+        cpu.boot(vec![0x00, 0x00, 0x00, 0x00], vec![]);
         cpu.step();
         assert_eq!(cpu.pc, 0x1);
         cpu.step();
@@ -159,7 +165,7 @@ mod tests {
         let mut cpu = Cpu::new();
         cpu.boot(vec![
             0x3E, 0x42, 0x06, 0x69, 0x0e, 0x42, 0x16, 0x69, 0x1e, 0x42, 0x26, 0x69, 0x2e, 0x42,
-        ]);
+        ], vec![]);
         cpu.step();
         assert_eq!(cpu.registers.get(&Register::A), 0x42);
         cpu.step();
@@ -186,7 +192,7 @@ mod tests {
         cpu.registers.set(&Register::D, 0x45);
         cpu.registers.set(&Register::E, 0x46);
 
-        cpu.boot(vec![0x36, 0x42, 0x70, 0x71, 0x72, 0x73, 0x74, 0x75]);
+        cpu.boot(vec![0x36, 0x42, 0x70, 0x71, 0x72, 0x73, 0x74, 0x75], vec![]);
         cpu.step();
 
         // Load 0x42 into memory at 0x5123
@@ -226,7 +232,7 @@ mod tests {
         cpu.memory.write(0x4223, 0x42);
         cpu.memory.write(0x4242, 0x42);
 
-        cpu.boot(vec![0x46, 0x4E, 0x56, 0x5E, 0x66, 0x6E, 0x7E]);
+        cpu.boot(vec![0x46, 0x4E, 0x56, 0x5E, 0x66, 0x6E, 0x7E], vec![]);
         assert_eq!(cpu.registers.get(&Register::B), 0x00);
         cpu.step();
         assert_eq!(cpu.registers.get(&Register::B), 0x42);
@@ -275,7 +281,7 @@ mod tests {
         cpu.boot(vec![
             0x7F, 0x78, 0x79, 0x7A, 0x7B, 0x7C, 0x7D, 0x7E, 0x0A, 0x1A, 0xFA, 0xCD, 0xAB, 0x3E,
             0x42,
-        ]);
+        ], vec![]);
         cpu.step();
 
         // Load 0x00 into A LD A, A
@@ -339,7 +345,7 @@ mod tests {
 
         cpu.boot(vec![
             0x47, 0x4f, 0x57, 0x5f, 0x67, 0x6f, 0x7f, 0x02, 0x12, 0x77, 0xEA, 0xCD, 0xAB,
-        ]);
+        ], vec![]);
 
         // Load A 0x42 into B LD B, A
         cpu.registers.set(&Register::A, 0x42);
@@ -404,7 +410,7 @@ mod tests {
         cpu.registers.set(&Register::C, 0x42);
         cpu.memory.write(0xFF42, 0x69);
 
-        cpu.boot(vec![0xF2]);
+        cpu.boot(vec![0xF2], vec![]);
         cpu.step();
         assert_eq!(cpu.registers.get(&Register::A), 0x69);
     }
@@ -415,7 +421,7 @@ mod tests {
         cpu.registers.set(&Register::A, 0x69);
         cpu.registers.set(&Register::C, 0x42);
 
-        cpu.boot(vec![0xE2]);
+        cpu.boot(vec![0xE2], vec![]);
         cpu.step();
         assert_eq!(cpu.memory.read(0xFF42), 0x69);
     }
@@ -426,7 +432,7 @@ mod tests {
         cpu.registers.set(&Register::A, 0x69);
         cpu.memory.write(0xFF42, 0x00);
 
-        cpu.boot(vec![0xE0, 0x42]);
+        cpu.boot(vec![0xE0, 0x42], vec![]);
         cpu.step();
         assert_eq!(cpu.memory.read(0xFF42), 0x69);
     }
@@ -437,7 +443,7 @@ mod tests {
         cpu.registers.set(&Register::A, 0x00);
         cpu.memory.write(0xFF42, 0x69);
 
-        cpu.boot(vec![0xF0, 0x42]);
+        cpu.boot(vec![0xF0, 0x42], vec![]);
         cpu.step();
         assert_eq!(cpu.registers.get(&Register::A), 0x69);
     }
@@ -449,7 +455,7 @@ mod tests {
         cpu.registers.set_16(&Register::HL, 0x1234);
         cpu.memory.write(0x1235, 0x00);
 
-        cpu.boot(vec![0x22]);
+        cpu.boot(vec![0x22], vec![]);
         cpu.step();
         assert_eq!(cpu.memory.read(0x1235), 0x69);
     }
@@ -461,7 +467,7 @@ mod tests {
         cpu.registers.set_16(&Register::HL, 0x1234);
         cpu.memory.write(0x1233, 0x00);
 
-        cpu.boot(vec![0x32]);
+        cpu.boot(vec![0x32], vec![]);
         cpu.step();
         assert_eq!(cpu.memory.read(0x1233), 0x69);
     }
@@ -476,7 +482,7 @@ mod tests {
 
         cpu.boot(vec![
             0x01, 0x34, 0x12, 0x11, 0x56, 0x34, 0x21, 0x78, 0x56, 0x31, 0xCD, 0xAB,
-        ]);
+        ], vec![]);
         cpu.step();
         assert_eq!(cpu.registers.get_16(&Register::BC), 0x1234);
         cpu.step();
@@ -493,7 +499,7 @@ mod tests {
         cpu.registers.set_16(&Register::HL, 0xFF69);
         cpu.registers.sp.set(0x0000);
 
-        cpu.boot(vec![0xF9, 0xF8, 0xFF]);
+        cpu.boot(vec![0xF9, 0xF8, 0xFF], vec![]);
         cpu.step();
         assert_eq!(cpu.registers.sp.get(), 0xFF69);
         cpu.step();
@@ -508,7 +514,7 @@ mod tests {
         // test half carry true and carry false
         cpu.registers.sp.set(0x0FFF);
         cpu.pc = 0x00;
-        cpu.boot(vec![0xF8, 0x01]);
+        cpu.boot(vec![0xF8, 0x01], vec![]);
         cpu.step();
         assert_eq!(cpu.registers.get_16(&Register::HL), 0x1000);
         assert_eq!(cpu.registers.f.zero, false);
@@ -526,7 +532,7 @@ mod tests {
         cpu.registers.set_16(&Register::AF, 0xAA55);
         cpu.registers.sp.set(0xFFFE);
 
-        cpu.boot(vec![0xC5, 0xD5, 0xE5, 0xF5, 0xF1, 0xC1, 0xD1, 0xE1]);
+        cpu.boot(vec![0xC5, 0xD5, 0xE5, 0xF5, 0xF1, 0xC1, 0xD1, 0xE1], vec![]);
         cpu.step();
         assert_eq!(cpu.memory.read_16(0xFFFC), 0x1234);
         cpu.step();
@@ -565,7 +571,7 @@ mod tests {
 
         cpu.boot(vec![
             0x87, 0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0xC6, 0x42,
-        ]);
+        ], vec![]);
         cpu.step();
 
         // Add A 0x00
@@ -612,7 +618,7 @@ mod tests {
         cpu.registers.set(&Register::L, 0x10);
         cpu.memory.write(0x0F10, 0x01);
 
-        cpu.boot(vec![0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0xC6, 0x42]);
+        cpu.boot(vec![0x80, 0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0xC6, 0x42], vec![]);
         cpu.step();
 
         // Add A 0xFF from B
@@ -686,7 +692,7 @@ mod tests {
 
         cpu.boot(vec![
             0x8F, 0x88, 0x89, 0x8A, 0x8B, 0x8C, 0x8D, 0x8E, 0xCE, 0x42,
-        ]);
+        ], vec![]);
 
         cpu.step();
         assert_eq!(cpu.registers.get(&Register::A), 0x00); // Add A 0x00 from A
@@ -723,7 +729,7 @@ mod tests {
 
         cpu.boot(vec![
             0x97, 0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0xD6, 0x42,
-        ]);
+        ], vec![]);
         cpu.step();
 
         // Sub A 0x00
@@ -770,7 +776,7 @@ mod tests {
         cpu.registers.set(&Register::L, 0x10);
         cpu.memory.write(0x0F10, 0x01);
 
-        cpu.boot(vec![0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0xD6, 0x42]);
+        cpu.boot(vec![0x90, 0x91, 0x92, 0x93, 0x94, 0x95, 0x96, 0xD6, 0x42], vec![]);
         cpu.step();
 
         // Sub A 0xFF from B
@@ -852,7 +858,7 @@ mod tests {
 
         cpu.boot(vec![
             0x9F, 0x98, 0x99, 0x9A, 0x9B, 0x9C, 0x9D, 0x9E, 0xDE, 0x42,
-        ]);
+        ], vec![]);
 
         cpu.step();
         assert_eq!(cpu.registers.get(&Register::A), 0x00); // Sub A 0x00 from A
@@ -888,7 +894,7 @@ mod tests {
 
         cpu.boot(vec![
             0xA7, 0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xE6, 0b11001100,
-        ]);
+        ], vec![]);
 
         // And A from A
         cpu.step();
@@ -989,7 +995,7 @@ mod tests {
 
         cpu.boot(vec![
             0xB7, 0xB0, 0xB1, 0xB2, 0xB3, 0xB4, 0xB5, 0xB6, 0xF6, 0b11001100,
-        ]);
+        ], vec![]);
 
         // Or A from A
         cpu.step();
@@ -1060,7 +1066,7 @@ mod tests {
 
         cpu.boot(vec![
             0xAF, 0xA8, 0xA9, 0xAA, 0xAB, 0xAC, 0xAD, 0xAE, 0xEE, 0b11001100,
-        ]);
+        ], vec![]);
 
         // Xor A from A
         cpu.step();
@@ -1158,7 +1164,7 @@ mod tests {
 
         cpu.boot(vec![
             0xBF, 0xB8, 0xB9, 0xBA, 0xBB, 0xBC, 0xBD, 0xBE, 0xFE, 0b11001100,
-        ]);
+        ], vec![]);
 
         // Cp A from A
         // 10101010 - 10101010 = 00000000
@@ -1200,7 +1206,7 @@ mod tests {
         cpu.registers.set(&Register::L, 0b11111110);
         cpu.memory.write(0x00FF, 0b10101010);
 
-        cpu.boot(vec![0x3C, 0x04, 0x0C, 0x14, 0x1C, 0x24, 0x2C, 0x34]);
+        cpu.boot(vec![0x3C, 0x04, 0x0C, 0x14, 0x1C, 0x24, 0x2C, 0x34], vec![]);
 
         // Inc A
         cpu.step();
@@ -1272,7 +1278,7 @@ mod tests {
         cpu.registers.set(&Register::L, 0b11111110);
         cpu.memory.write(0x00FF, 0b10101010);
 
-        cpu.boot(vec![0x3D, 0x05, 0x0D, 0x15, 0x1D, 0x25, 0x2D, 0x35]);
+        cpu.boot(vec![0x3D, 0x05, 0x0D, 0x15, 0x1D, 0x25, 0x2D, 0x35], vec![]);
 
         // Dec A
         cpu.step();
@@ -1332,7 +1338,7 @@ mod tests {
         cpu.registers.set_16(&Register::HL, 0x9ABC);
         cpu.registers.set_16(&Register::SP, 0x0000);
 
-        cpu.boot(vec![0x09, 0x19, 0x29, 0x39]);
+        cpu.boot(vec![0x09, 0x19, 0x29, 0x39], vec![]);
 
         // Add HL, BC
         cpu.registers.set_16(&Register::HL, 0x9ABC);
@@ -1375,7 +1381,7 @@ mod tests {
         let default_sp = 0x1234_u16;
         let mut cpu = Cpu::new();
 
-        cpu.boot(vec![0xE8, 0x00, 0xE8, 0x01, 0xE8, 0x02, 0xE8, 0xFF]);
+        cpu.boot(vec![0xE8, 0x00, 0xE8, 0x01, 0xE8, 0x02, 0xE8, 0xFF], vec![]);
 
         // Add SP, 0x00
         cpu.registers.set_16(&Register::SP, default_sp.clone());
@@ -1434,7 +1440,7 @@ mod tests {
         cpu.registers.set_16(&Register::HL, 0x9ABC);
         cpu.registers.set_16(&Register::SP, 0x0000);
 
-        cpu.boot(vec![0x03, 0x13, 0x23, 0x33]);
+        cpu.boot(vec![0x03, 0x13, 0x23, 0x33], vec![]);
 
         // Inc BC
         cpu.step();
@@ -1461,7 +1467,7 @@ mod tests {
         cpu.registers.set_16(&Register::HL, 0x9ABC);
         cpu.registers.set_16(&Register::SP, 0x0000);
 
-        cpu.boot(vec![0x0B, 0x1B, 0x2B, 0x3B]);
+        cpu.boot(vec![0x0B, 0x1B, 0x2B, 0x3B], vec![]);
 
         // Dec BC
         cpu.step();
@@ -1498,7 +1504,7 @@ mod tests {
         cpu.boot(vec![
             0xCB, 0x37, 0xCB, 0x30, 0xCB, 0x31, 0xCB, 0x32, 0xCB, 0x33, 0xCB, 0x34, 0xCB, 0x35,
             0xCB, 0x36,
-        ]);
+        ], vec![]);
 
         // Swap A
         cpu.step();
@@ -1570,7 +1576,7 @@ mod tests {
     fn execute_ccf() {
         let mut cpu = Cpu::new();
 
-        cpu.boot(vec![0x3F, 0x3F]);
+        cpu.boot(vec![0x3F, 0x3F], vec![]);
 
         cpu.registers.f.subtract = true;
         cpu.registers.f.half_carry = true;
@@ -1593,7 +1599,7 @@ mod tests {
     fn execute_scf() {
         let mut cpu = Cpu::new();
 
-        cpu.boot(vec![0x37, 0x37]);
+        cpu.boot(vec![0x37, 0x37], vec![]);
 
         cpu.registers.f.subtract = true;
         cpu.registers.f.half_carry = true;
@@ -1615,7 +1621,7 @@ mod tests {
     #[test]
     fn execute_rlca() {
         let mut cpu = Cpu::new();
-        cpu.boot(vec![0x07, 0x07]);
+        cpu.boot(vec![0x07, 0x07], vec![]);
 
         cpu.registers.f.zero = true;
         cpu.registers.f.subtract = true;
@@ -1648,7 +1654,7 @@ mod tests {
     fn execute_rla() {
         let mut cpu = Cpu::new();
 
-        cpu.boot(vec![0x17, 0x17]);
+        cpu.boot(vec![0x17, 0x17], vec![]);
 
         cpu.registers.set(&Register::A, 0b10000000);
         cpu.step();
@@ -1667,7 +1673,7 @@ mod tests {
     fn execute_rrca() {
         let mut cpu = Cpu::new();
 
-        cpu.boot(vec![0x0F, 0x0F]);
+        cpu.boot(vec![0x0F, 0x0F], vec![]);
 
         cpu.registers.set(&Register::A, 0b00000001);
         cpu.step();
@@ -1686,7 +1692,7 @@ mod tests {
     fn execute_rra() {
         let mut cpu = Cpu::new();
 
-        cpu.boot(vec![0x1F, 0x1F]);
+        cpu.boot(vec![0x1F, 0x1F], vec![]);
 
         assert_eq!(cpu.registers.f.carry, false);
         cpu.registers.set(&Register::A, 0b00000001);
@@ -1709,7 +1715,7 @@ mod tests {
         cpu.boot(vec![
             0xCB, 0x00, 0xCB, 0x01, 0xCB, 0x02, 0xCB, 0x03, 0xCB, 0x04, 0xCB, 0x05, 0xCB, 0x06,
             0xCB, 0x07,
-        ]);
+        ], vec![]);
 
         // RLC B
         cpu.registers.set(&Register::B, 0b10000000);
