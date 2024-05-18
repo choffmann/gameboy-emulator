@@ -14,7 +14,7 @@ impl<'a> MiscCommand<'a> {
     }
 
     fn nop(&mut self) -> u16 {
-        self.cpu.pc.wrapping_add(1)
+        self.cpu.pc.wrapping_add(0)
     }
 
     fn swap(&mut self, from: &Register) -> u16 {
@@ -53,6 +53,16 @@ impl<'a> MiscCommand<'a> {
 
         self.cpu.pc.wrapping_add(1)
     }
+
+    fn ei(&mut self) -> u16 {
+        self.cpu.interrupts_enabled = true;
+        self.cpu.pc.wrapping_add(1)
+    }
+
+    fn di(&mut self) -> u16 {
+        self.cpu.interrupts_enabled = false;
+        self.cpu.pc.wrapping_add(1)
+    }
 }
 
 impl Command for MiscCommand<'_> {
@@ -62,6 +72,8 @@ impl Command for MiscCommand<'_> {
             MiscInstruction::Swap(from) => self.swap(from),
             MiscInstruction::CCF => self.ccf(),
             MiscInstruction::SCF => self.scf(),
+            MiscInstruction::EI => self.ei(),
+            MiscInstruction::DI => self.di(),
             _ => unimplemented!(),
         }
     }

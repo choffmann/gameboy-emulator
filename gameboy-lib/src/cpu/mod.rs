@@ -1,6 +1,6 @@
 use crate::{cpu::instructions::Instruction, memory::Memory};
 
-use self::{command::CommandFactory, registers::Register};
+use self::{command::CommandFactory, instructions::FlagCondition, registers::Register};
 
 pub mod command;
 pub mod instructions;
@@ -14,6 +14,7 @@ enum FlagUpdate {
 }
 
 pub struct Cpu {
+    pub interrupts_enabled: bool,
     pub registers: registers::Registers,
     pub pc: u16,
     pub memory: Memory,
@@ -22,6 +23,7 @@ pub struct Cpu {
 impl Cpu {
     pub fn new() -> Cpu {
         Cpu {
+            interrupts_enabled: false,
             registers: registers::Registers::new(),
             pc: 0,
             memory: Memory::new(),
@@ -79,6 +81,15 @@ impl Cpu {
         }
     }
 
+    fn resolve_flag_condition(&mut self, condition: &FlagCondition) -> bool {
+        match condition {
+            FlagCondition::NZ => !self.registers.f.zero,
+            FlagCondition::Z => self.registers.f.zero,
+            FlagCondition::NC => !self.registers.f.carry,
+            FlagCondition::C => self.registers.f.carry,
+        }
+    }
+
     fn update_flag(&mut self, flag: FlagUpdate) {
         match flag {
             FlagUpdate::Zero(value) => self.registers.f.zero = value,
@@ -88,9 +99,10 @@ impl Cpu {
         }
     }
 
-    fn execute(&mut self, instruction: Instruction, prefixed: bool) -> u16 {
+    fn execute(&mut self, instruction: Instruction, _prefixed: bool) -> u16 {
+        println!("[CPU] Executing {:?}", instruction);
         let mut factory = CommandFactory::new(self);
-        let mut command = factory.create_command(&instruction, prefixed);
+        let mut command = factory.create_command(&instruction);
         command.execute()
     }
 
