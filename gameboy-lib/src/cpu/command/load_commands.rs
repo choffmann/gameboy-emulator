@@ -171,16 +171,22 @@ impl<'a> LoadCommand<'a> {
                 self.cpu.pc.wrapping_add(2)
             }
             LoadInstruction::LdHi => {
-                let address = self.cpu.registers.get_16(&Register::HL) + 1;
+                let address = self.cpu.registers.get_16(&Register::HL);
                 let value = self.cpu.registers.get(&Register::A);
                 self.cpu.memory.write(address, value);
+
+                let value = self.cpu.registers.get_16(&Register::HL).wrapping_add(1);
+                self.cpu.registers.set_16(&Register::HL, value);
 
                 self.cpu.pc.wrapping_add(1)
             }
             LoadInstruction::LdHd => {
-                let address = self.cpu.registers.get_16(&Register::HL) - 1;
+                let address = self.cpu.registers.get_16(&Register::HL);
                 let value = self.cpu.registers.get(&Register::A);
                 self.cpu.memory.write(address, value);
+                
+                let value = self.cpu.registers.get_16(&Register::HL).wrapping_sub(1);
+                self.cpu.registers.set_16(&Register::HL, value);
 
                 self.cpu.pc.wrapping_add(1)
             }

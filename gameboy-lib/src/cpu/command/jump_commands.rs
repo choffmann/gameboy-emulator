@@ -21,9 +21,8 @@ impl<'a> JumpCommand<'a> {
     }
 
     fn jp_cc(&mut self, condition: &FlagCondition) -> u16 {
-        let address = self.cpu.memory.read_16(self.cpu.pc + 1);
         if self.cpu.resolve_flag_condition(condition) {
-            address
+            self.jp()
         } else {
             self.cpu.pc.wrapping_add(3)
         }
@@ -34,16 +33,22 @@ impl<'a> JumpCommand<'a> {
     }
 
     fn jr(&mut self) -> u16 {
-        let offset = self.cpu.memory.read(self.cpu.pc + 1) as u16;
-        self.cpu.pc.wrapping_add(offset)
+        let offset = self.cpu.memory.read(self.cpu.pc + 1) as i8;
+        let new_pc = self
+            .cpu
+            .pc
+            .wrapping_add(2)
+            .wrapping_add(offset as i16 as u16);
+        println!("[CPU] Jump to address 0x{:x}", new_pc);
+        new_pc
     }
 
     fn jr_cc(&mut self, condition: &FlagCondition) -> u16 {
-        let offset = self.cpu.memory.read(self.cpu.pc + 1) as u16;
+        let next_step = self.cpu.pc.wrapping_add(2);
         if self.cpu.resolve_flag_condition(condition) {
-            self.cpu.pc.wrapping_add(offset)
+            self.jr()
         } else {
-            self.cpu.pc.wrapping_add(2)
+            return next_step;
         }
     }
 }

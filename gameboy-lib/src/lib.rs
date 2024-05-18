@@ -21,6 +21,12 @@ impl Gameboy {
         self.cpu.boot(self.boot_rom.clone(), self.game_rom.clone());
         self.cpu.run();
     }
+
+    pub fn dump_memory(&self) -> Vec<u8> {
+        self.cpu.memory.dump()
+        // let _ = File::create("memory.bin").unwrap();
+        // fs::write("memory.bin", &buffer).unwrap();
+    }
 }
 
 #[cfg(test)]

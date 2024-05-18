@@ -40,6 +40,7 @@ pub const HIGH_RAM_SIZE: usize = HIGH_RAM_END - HIGH_RAM_BEGIN + 1;
 
 pub const INTERRUPT_ENABLE_REGISTER: usize = 0xFFFF;
 
+#[derive(Debug)]
 pub struct Memory {
     rom_bank_0: [u8; ROM_BANK_0_SIZE],
     rom_bank_n: [u8; ROM_BANK_N_SIZE],
@@ -69,6 +70,22 @@ impl Memory {
             high_ram: [0; HIGH_RAM_SIZE],
             interrupt_enable_register: 0,
         }
+    }
+
+    pub fn dump(&self) -> Vec<u8> {
+        let mut dump = Vec::new();
+        dump.extend_from_slice(&self.rom_bank_0);
+        dump.extend_from_slice(&self.rom_bank_n);
+        dump.extend_from_slice(&self.vram);
+        dump.extend_from_slice(&self.external_ram);
+        dump.extend_from_slice(&self.working_ram);
+        dump.extend_from_slice(&self.echo_ram);
+        dump.extend_from_slice(&self.oam);
+        dump.extend_from_slice(&self.unused);
+        dump.extend_from_slice(&self.io_registers);
+        dump.extend_from_slice(&self.high_ram);
+        dump.push(self.interrupt_enable_register);
+        dump
     }
 
     pub fn read(&self, address: u16) -> u8 {

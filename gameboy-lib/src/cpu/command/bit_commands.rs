@@ -13,14 +13,15 @@ impl<'a> BitCommand<'a> {
     }
 
     fn bit(&mut self, bit: &u8, from: &Register) -> u16 {
-        let value = self.cpu.registers.get(from);
-        let result = value & (1 << bit);
+        let (value, pc) = self.cpu.extract_operand(from);
 
-        self.cpu.registers.f.zero = result == 0;
+        self.cpu.registers.f.zero = (value >> bit) & 0xF == 0;
         self.cpu.registers.f.subtract = false;
         self.cpu.registers.f.half_carry = true;
 
-        self.cpu.pc.wrapping_add(2)
+        println!("[CPU] Bit {} from 0x{:02X} is {}", bit, value, self.cpu.registers.f.zero);
+
+        pc
     }
 
     fn res(&mut self, bit: &u8, from: &Register) -> u16 {
