@@ -9,11 +9,13 @@ on:
 env:
   CARGO_TERM_COLOR: always
 
+defaults:
+      run:
+        working-directory: ./gameboy-lib
+
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v4
     - name: Build
