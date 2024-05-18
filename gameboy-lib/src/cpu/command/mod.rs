@@ -5,6 +5,7 @@ use super::{instructions::Instruction, Cpu};
 pub mod alu_commands;
 pub mod load_commands;
 pub mod misc_commands;
+pub mod rotate_commands;
 
 pub trait Command {
     fn execute(&mut self) -> u16;
@@ -32,6 +33,7 @@ impl<'a> CommandFactory<'a> {
             Instruction::Load(load_command) => Box::new(LoadCommand::new(load_command, self.cpu)),
             Instruction::Arithmetic(alu_command) => Box::new(ArithmeticCommand::new(alu_command, self.cpu)),
             Instruction::Misc(misc_command) => Box::new(misc_commands::MiscCommand::new(&misc_command, self.cpu)),
+            Instruction::Rotate(rotate_command) => Box::new(rotate_commands::RotateCommand::new(rotate_command, self.cpu)),
             _ => unimplemented!(),
         }
     }
@@ -39,6 +41,7 @@ impl<'a> CommandFactory<'a> {
     fn prefix_command(&'a mut self, instruction: &'a Instruction) -> Box<dyn Command + 'a> {
         match instruction {
             Instruction::Misc(misc_command) => Box::new(misc_commands::MiscCommand::new(&misc_command, self.cpu)),
+            Instruction::Rotate(rotate_command) => Box::new(rotate_commands::RotateCommand::new(rotate_command, self.cpu)),
             _ => unimplemented!(),
         }
     }

@@ -1553,4 +1553,207 @@ mod tests {
         assert_eq!(cpu.registers.f.half_carry, false);
         assert_eq!(cpu.registers.f.carry, false);
     }
+
+    #[test]
+    fn execute_ccf() {
+        let mut cpu = Cpu::new();
+
+        cpu.boot(vec![0x3F, 0x3F]);
+
+        cpu.registers.f.subtract = true;
+        cpu.registers.f.half_carry = true;
+        cpu.registers.f.carry = true;
+        cpu.step();
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, false);
+        assert_eq!(cpu.registers.f.carry, false);
+
+        cpu.registers.f.subtract = false;
+        cpu.registers.f.half_carry = true;
+        cpu.registers.f.carry = false;
+        cpu.step();
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, false);
+        assert_eq!(cpu.registers.f.carry, true);
+    }
+
+    #[test]
+    fn execute_scf() {
+        let mut cpu = Cpu::new();
+
+        cpu.boot(vec![0x37, 0x37]);
+
+        cpu.registers.f.subtract = true;
+        cpu.registers.f.half_carry = true;
+        cpu.registers.f.carry = true;
+        cpu.step();
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, false);
+        assert_eq!(cpu.registers.f.carry, true);
+
+        cpu.registers.f.subtract = false;
+        cpu.registers.f.half_carry = true;
+        cpu.registers.f.carry = false;
+        cpu.step();
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, false);
+        assert_eq!(cpu.registers.f.carry, true);
+    }
+
+    #[test]
+    fn execute_rlca() {
+        let mut cpu = Cpu::new();
+        cpu.boot(vec![0x07, 0x07]);
+
+        cpu.registers.f.zero = true;
+        cpu.registers.f.subtract = true;
+        cpu.registers.f.half_carry = true;
+        cpu.registers.f.carry = true;
+        cpu.registers.set(&Register::A, 0b10000000);
+        cpu.step();
+
+        assert_eq!(cpu.registers.get(&Register::A), 0b00000001);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, false);
+        assert_eq!(cpu.registers.f.carry, true);
+
+        cpu.registers.set(&Register::A, 0b00000001);
+        cpu.registers.f.zero = true;
+        cpu.registers.f.subtract = true;
+        cpu.registers.f.half_carry = true;
+        cpu.registers.f.carry = true;
+        cpu.step();
+
+        assert_eq!(cpu.registers.get(&Register::A), 0b00000010);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.subtract, false);
+        assert_eq!(cpu.registers.f.half_carry, false);
+        assert_eq!(cpu.registers.f.carry, false);
+    }
+
+    #[test]
+    fn execute_rla() {
+        let mut cpu = Cpu::new();
+
+        cpu.boot(vec![0x17, 0x17]);
+
+        cpu.registers.set(&Register::A, 0b10000000);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0b00000000);
+        assert_eq!(cpu.registers.f.zero, true);
+        assert_eq!(cpu.registers.f.carry, true);
+
+        cpu.registers.set(&Register::A, 0b00000001);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0b00000011);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.carry, false);
+    }
+
+    #[test]
+    fn execute_rrca() {
+        let mut cpu = Cpu::new();
+
+        cpu.boot(vec![0x0F, 0x0F]);
+
+        cpu.registers.set(&Register::A, 0b00000001);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0b10000000);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.carry, true);
+
+        cpu.registers.set(&Register::A, 0b10000000);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0b01000000);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.carry, false);
+    }
+
+    #[test]
+    fn execute_rra() {
+        let mut cpu = Cpu::new();
+
+        cpu.boot(vec![0x1F, 0x1F]);
+
+        assert_eq!(cpu.registers.f.carry, false);
+        cpu.registers.set(&Register::A, 0b00000001);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0b00000000);
+        assert_eq!(cpu.registers.f.zero, true);
+        assert_eq!(cpu.registers.f.carry, true);
+
+        assert_eq!(cpu.registers.f.carry, true);
+        cpu.registers.set(&Register::A, 0b00000010);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0b10000001);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.carry, false);
+    }
+
+    #[test]
+    fn execute_rlc() {
+        let mut cpu = Cpu::new();
+        cpu.boot(vec![
+            0xCB, 0x00, 0xCB, 0x01, 0xCB, 0x02, 0xCB, 0x03, 0xCB, 0x04, 0xCB, 0x05, 0xCB, 0x06,
+            0xCB, 0x07,
+        ]);
+
+        // RLC B
+        cpu.registers.set(&Register::B, 0b10000000);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::B), 0b00000001);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.carry, true);
+
+        // RLC C
+        cpu.registers.set(&Register::C, 0b00000001);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::C), 0b00000010);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.carry, false);
+
+        // RLC D
+        cpu.registers.set(&Register::D, 0b00000000);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::D), 0b00000000);
+        assert_eq!(cpu.registers.f.zero, true);
+        assert_eq!(cpu.registers.f.carry, false);
+
+        // RLC E
+        cpu.registers.set(&Register::E, 0b00000001);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::E), 0b00000010);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.carry, false);
+
+        // RLC H
+        cpu.registers.set(&Register::H, 0b10000000);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::H), 0b00000001);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.carry, true);
+
+        // RLC L
+        cpu.registers.set(&Register::L, 0b00000001);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::L), 0b00000010);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.carry, false);
+
+        // RLC (HL)
+        cpu.memory.write(0x00FF, 0b10000000);
+        cpu.registers.set_16(&Register::HL, 0x00FF);
+        cpu.step();
+        assert_eq!(cpu.memory.read(0x00FF), 0b00000001);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.carry, true);
+
+        // RLC A
+        cpu.registers.set(&Register::A, 0b10000000);
+        cpu.step();
+        assert_eq!(cpu.registers.get(&Register::A), 0b00000001);
+        assert_eq!(cpu.registers.f.zero, false);
+        assert_eq!(cpu.registers.f.carry, true);
+    }
 }

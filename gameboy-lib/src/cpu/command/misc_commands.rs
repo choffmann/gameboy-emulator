@@ -37,6 +37,22 @@ impl<'a> MiscCommand<'a> {
 
         return pc;
     }
+
+    fn ccf(&mut self) -> u16 {
+        self.cpu.registers.f.subtract = false;
+        self.cpu.registers.f.half_carry = false;
+        self.cpu.registers.f.carry = !self.cpu.registers.f.carry;
+
+        self.cpu.pc.wrapping_add(1)
+    }
+
+    fn scf(&mut self) -> u16 {
+        self.cpu.registers.f.subtract = false;
+        self.cpu.registers.f.half_carry = false;
+        self.cpu.registers.f.carry = true;
+
+        self.cpu.pc.wrapping_add(1)
+    }
 }
 
 impl Command for MiscCommand<'_> {
@@ -44,6 +60,8 @@ impl Command for MiscCommand<'_> {
         match &self.instruction {
             MiscInstruction::Nop => self.nop(),
             MiscInstruction::Swap(from) => self.swap(from),
+            MiscInstruction::CCF => self.ccf(),
+            MiscInstruction::SCF => self.scf(),
             _ => unimplemented!(),
         }
     }
